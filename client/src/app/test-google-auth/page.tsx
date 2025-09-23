@@ -1,13 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { googleAuth } from "@/store/slices/authSlice";
+import { useAppSelector } from "@/store/hooks";
 import GoogleAuthButton from "../components/GoogleAuthButton";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 
 export default function TestGoogleAuthPage() {
-  const dispatch = useAppDispatch();
   const { user, isAuthenticated, loading, error } = useAppSelector(
     (state) => state.auth
   );

@@ -35,9 +35,10 @@ export const useGoogleAuth = (options: UseGoogleAuthOptions = {}) => {
           
           router.push(redirectPath);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Google authentication failed:", error);
-        options.onError?.(error.message || "Google authentication failed");
+        const errorMessage = error instanceof Error ? error.message : "Google authentication failed";
+        options.onError?.(errorMessage);
       }
     },
     [dispatch, router, options]
@@ -59,6 +60,7 @@ export const useGoogleAuth = (options: UseGoogleAuthOptions = {}) => {
       const authUrl = await getGoogleAuthUrl();
       window.location.href = authUrl;
     } catch (error) {
+      console.error("Failed to redirect to Google authentication:", error);
       options.onError?.("Failed to redirect to Google authentication");
     }
   }, [getGoogleAuthUrl, options]);

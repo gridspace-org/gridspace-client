@@ -46,7 +46,7 @@ type ApiResponse<T = unknown> = { message?: string } & {
 //   process.env.NEXT_PUBLIC_API_URL ||
 //   "https://gridspace-server.onrender.com/api";
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  process.env.NEXT_PUBLIC_API_URL || "https://gridspace-backend.onrender.com/api";
 
 class ApiService {
   private baseURL: string;

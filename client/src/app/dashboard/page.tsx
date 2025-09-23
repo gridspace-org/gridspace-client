@@ -5,13 +5,10 @@ import {
   Calendar,
   Wallet,
   MessageCircle,
-  Filter,
-  Bell,
 } from "lucide-react";
 import { DashboardCard, DashboardNav, WorkspaceCard } from "../components";
 import RouteGuard from "../middleware/RouteGuard";
 import { useAppSelector } from "@/store/hooks";
-import Image from "next/image";
 
 export default function DashboardPage() {
   const { user } = useAppSelector((state) => state.auth);

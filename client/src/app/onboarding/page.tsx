@@ -85,9 +85,10 @@ export default function OnboardingPage() {
           // Fallback to user dashboard if role is not recognized
           router.push("/dashboard");
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Failed to complete onboarding:", error);
-        setError(error.message || "Failed to complete onboarding. Please try again.");
+        const errorMessage = error instanceof Error ? error.message : "Failed to complete onboarding. Please try again.";
+        setError(errorMessage);
       } finally {
         setIsSubmitting(false);
       }

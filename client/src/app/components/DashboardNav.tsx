@@ -13,7 +13,6 @@ interface DashboardNavProps {
 export default function DashboardNav({
   userName,
   memberSince,
-  wallet = "₦0",
   profilePic,
 }: DashboardNavProps) {
   return (

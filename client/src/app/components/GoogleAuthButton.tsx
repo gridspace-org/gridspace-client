@@ -14,14 +14,28 @@ interface GoogleAuthButtonProps {
   disabled?: boolean;
 }
 
+interface GoogleCredentialResponse {
+  credential: string;
+  select_by: string;
+}
+
+interface GoogleAccounts {
+  accounts: {
+    id: {
+      initialize: (config: { client_id: string; callback: (response: GoogleCredentialResponse) => void; auto_select: boolean; cancel_on_tap_outside: boolean }) => void;
+      renderButton: (element: HTMLElement, config: { theme: string; size: string; width: string; text: string; shape: string; logo_alignment: string }) => void;
+      cancel: () => void;
+    };
+  };
+}
+
 declare global {
   interface Window {
-    google: any;
+    google: GoogleAccounts;
   }
 }
 
 export default function GoogleAuthButton({
-  text = "Continue with Google",
   className = "",
   onSuccess,
   onError,
@@ -37,8 +51,13 @@ export default function GoogleAuthButton({
       if (isInitialized.current || !window.google) return;
 
       try {
+        const clientId = "677934944167-4v9lceevak86t03a8lk4o7lo8r7lgg6p.apps.googleusercontent.com";
+        if (!clientId) {
+          throw new Error("Google Client ID not configured");
+        }
+        
         window.google.accounts.id.initialize({
-          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+          client_id: clientId,
           callback: handleCredentialResponse,
           auto_select: false,
           cancel_on_tap_outside: true,
@@ -51,7 +70,7 @@ export default function GoogleAuthButton({
       }
     };
 
-    const handleCredentialResponse = async (response: any) => {
+    const handleCredentialResponse = async (response: GoogleCredentialResponse) => {
       try {
         if (!response.credential) {
           throw new Error("No credential received from Google");
@@ -70,9 +89,10 @@ export default function GoogleAuthButton({
             router.push("/onboarding");
           }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Google authentication failed";
         console.error("Google authentication failed:", error);
-        onError?.(error.message || "Google authentication failed");
+        onError?.(errorMessage);
       }
     };
 
@@ -130,9 +150,10 @@ export default function GoogleAuthButton({
       setTimeout(() => {
         document.body.removeChild(googleButton);
       }, 1000);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Google Sign-In failed";
       console.error("Google Sign-In failed:", error);
-      onError?.(error.message || "Google Sign-In failed");
+      onError?.(errorMessage);
     }
   };
 
