@@ -5,6 +5,8 @@ const PasswordReset = require("../models/PasswordReset");
 const EmailVerification = require("../models/EmailVerification");
 const cloudinary = require("../config/cloudinary");
 const { verifyGoogleToken, getGoogleAuthUrl, getTokensFromCode } = require("../config/googleAuth");
+const { generateSecureOTP, verifyOTP, isOTPExpired } = require("../services/otpService");
+const emailService = require("../services/emailService");
 
 // Helper function to generate JWT token
 const generateToken = (userId) => {
@@ -366,12 +368,27 @@ const requestPasswordReset = async (req, res) => {
       expiresAt: new Date(Date.now() + 3600000), // 1 hour from now
     });
 
-    // In a real application, you would send an email here
-    // For now, we'll just return the token (remove this in production)
+    // Send password reset email
+    const emailResult = await emailService.sendPasswordResetEmail(
+      email.toLowerCase(),
+      resetToken,
+      user.fullname
+    );
+
+    if (!emailResult.success) {
+      // If email sending fails, clean up the database record
+      await PasswordReset.deleteOne({ email: email.toLowerCase(), token: resetToken });
+      
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send password reset email. Please try again.",
+        error: emailResult.error,
+      });
+    }
+
     res.status(200).json({
       success: true,
-      message: "Password reset token generated",
-      resetToken, // Remove this in production
+      message: "Password reset email sent to your email address",
     });
   } catch (error) {
     res.status(500).json({
@@ -469,24 +486,76 @@ const requestEmailVerification = async (req, res) => {
       });
     }
 
-    // Generate verification token
-    const verificationToken = crypto.randomBytes(32).toString("hex");
+    // Check if email is already verified
+    if (user.emailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already verified",
+      });
+    }
 
-    // Save verification token to database
+    // Check if there's an existing unexpired OTP
+    const existingVerification = await EmailVerification.findOne({
+      email: email.toLowerCase(),
+      verified: false,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (existingVerification) {
+      // Check if user has exceeded max attempts
+      if (existingVerification.attempts >= 3) {
+        return res.status(429).json({
+          success: false,
+          message: "Maximum verification attempts exceeded. Please try again later.",
+        });
+      }
+
+      // Return existing OTP info without sending new email
+      return res.status(200).json({
+        success: true,
+        message: "Verification OTP already sent. Please check your email.",
+        remainingAttempts: 3 - existingVerification.attempts,
+      });
+    }
+
+    // Generate secure OTP
+    const { otp, expiresAt } = generateSecureOTP(6, 10); // 6-digit OTP, 10 minutes expiry
+
+    // Delete any existing verification records for this email
+    await EmailVerification.deleteMany({ email: email.toLowerCase() });
+
+    // Save OTP to database
     await EmailVerification.create({
       email: email.toLowerCase(),
-      token: verificationToken,
-      expiresAt: new Date(Date.now() + 86400000), // 24 hours from now
+      otp,
+      expiresAt,
     });
 
-    // In a real application, you would send an email here
-    // For now, we'll just return the token (remove this in production)
+    // Send OTP email
+    const emailResult = await emailService.sendOTPEmail(
+      email.toLowerCase(),
+      otp,
+      user.fullname
+    );
+
+    if (!emailResult.success) {
+      // If email sending fails, clean up the database record
+      await EmailVerification.deleteOne({ email: email.toLowerCase(), otp });
+      
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send verification email. Please try again.",
+        error: emailResult.error,
+      });
+    }
+
     res.status(200).json({
       success: true,
-      message: "Email verification token generated",
-      verificationToken, // Remove this in production
+      message: "Verification OTP sent to your email address",
+      remainingAttempts: 3,
     });
   } catch (error) {
+    console.error("Error in requestEmailVerification:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -498,32 +567,67 @@ const requestEmailVerification = async (req, res) => {
 // Verify email
 const verifyEmail = async (req, res) => {
   try {
-    const { token } = req.body;
+    const { email, otp } = req.body;
 
-    // Validate token
-    if (!token) {
+    // Validate required fields
+    if (!email || !otp) {
       return res.status(400).json({
         success: false,
-        message: "Please provide verification token",
+        message: "Please provide email address and OTP",
       });
     }
 
-    // Find valid verification token
+    // Find verification record
     const emailVerification = await EmailVerification.findOne({
-      token,
+      email: email.toLowerCase(),
       verified: false,
-      expiresAt: { $gt: new Date() },
     });
 
     if (!emailVerification) {
       return res.status(400).json({
         success: false,
-        message: "Invalid or expired verification token",
+        message: "No verification request found for this email. Please request a new OTP.",
+      });
+    }
+
+    // Check if OTP is expired
+    if (isOTPExpired(emailVerification.expiresAt)) {
+      // Clean up expired record
+      await EmailVerification.deleteOne({ _id: emailVerification._id });
+      
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired. Please request a new verification code.",
+      });
+    }
+
+    // Check if max attempts exceeded
+    if (emailVerification.attempts >= 3) {
+      return res.status(429).json({
+        success: false,
+        message: "Maximum verification attempts exceeded. Please request a new OTP.",
+      });
+    }
+
+    // Verify OTP
+    const verificationResult = verifyOTP(otp, emailVerification.otp, emailVerification.expiresAt);
+
+    if (!verificationResult.success) {
+      // Increment attempts
+      emailVerification.attempts += 1;
+      await emailVerification.save();
+
+      const remainingAttempts = 3 - emailVerification.attempts;
+      
+      return res.status(400).json({
+        success: false,
+        message: verificationResult.message,
+        remainingAttempts: remainingAttempts > 0 ? remainingAttempts : 0,
       });
     }
 
     // Find user by email
-    const user = await User.findOne({ email: emailVerification.email });
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -539,11 +643,91 @@ const verifyEmail = async (req, res) => {
     user.emailVerified = true;
     await user.save();
 
+    // Clean up verification record
+    await EmailVerification.deleteOne({ _id: emailVerification._id });
+
     res.status(200).json({
       success: true,
       message: "Email verified successfully",
     });
   } catch (error) {
+    console.error("Error in verifyEmail:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+// Resend email verification OTP
+const resendEmailVerification = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Validate email
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide email address",
+      });
+    }
+
+    // Check if user exists
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User with this email does not exist",
+      });
+    }
+
+    // Check if email is already verified
+    if (user.emailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already verified",
+      });
+    }
+
+    // Delete any existing verification records for this email
+    await EmailVerification.deleteMany({ email: email.toLowerCase() });
+
+    // Generate new secure OTP
+    const { otp, expiresAt } = generateSecureOTP(6, 10); // 6-digit OTP, 10 minutes expiry
+
+    // Save new OTP to database
+    await EmailVerification.create({
+      email: email.toLowerCase(),
+      otp,
+      expiresAt,
+    });
+
+    // Send new OTP email
+    const emailResult = await emailService.sendOTPEmail(
+      email.toLowerCase(),
+      otp,
+      user.fullname
+    );
+
+    if (!emailResult.success) {
+      // If email sending fails, clean up the database record
+      await EmailVerification.deleteOne({ email: email.toLowerCase(), otp });
+      
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send verification email. Please try again.",
+        error: emailResult.error,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "New verification OTP sent to your email address",
+      remainingAttempts: 3,
+    });
+  } catch (error) {
+    console.error("Error in resendEmailVerification:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -887,6 +1071,7 @@ module.exports = {
   resetPassword,
   requestEmailVerification,
   verifyEmail,
+  resendEmailVerification,
   logout,
   refreshToken,
   deleteAccount,

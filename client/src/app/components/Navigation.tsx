@@ -12,12 +12,12 @@ export default function Navigation() {
     <>
       {/* Navigation */}
       <nav className="flex items-center justify-between px-4 md:px-8 py-2 max-w-[1440px] mx-auto">
-        <div className="flex items-center gap-4">
+        <Link href="/" className="flex items-center gap-4">
           <Image src="/logo.png" alt="GridSpace Logo" width={40} height={40} />
           <span className="text-[28px] font-bold text-[var(--color-primary)]">
             GridSpace
           </span>
-        </div>
+        </Link>
 
         <div className="flex items-center gap-4">
           <div className="hidden [@media(min-width:840px)]:flex items-center gap-6 mr-6">
@@ -39,10 +39,16 @@ export default function Navigation() {
             >
               About
             </a>
+            <Link
+              href="/blog"
+              className="text-sm text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
+            >
+              Blog
+            </Link>
           </div>
-          <button className="hidden [@media(min-width:840px)]:inline-block px-3 md:px-4 py-2 text-sm font-bold text-[var(--color-text-primary)] hover:bg-gray-100 rounded-lg">
-            Become a Host
-          </button>
+          <Link href="/signin" className="hidden [@media(min-width:840px)]:inline-block px-3 md:px-4 py-2 text-sm font-bold text-[var(--color-text-primary)] hover:bg-gray-100 rounded-lg">
+            Login
+          </Link>
           <Link
             href="/signup"
             className="hidden [@media(min-width:840px)]:inline-block px-3 md:px-4 py-2 text-sm font-bold text-[var(--color-text-light)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] rounded-lg"
@@ -89,13 +95,21 @@ export default function Navigation() {
             >
               About
             </a>
+            <Link
+              href="/blog"
+              className="text-sm text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
+              onClick={() => setMobileOpen(false)}
+            >
+              Blog
+            </Link>
             <div className="flex items-center gap-3 pt-1">
-              <button
-                className="flex-1 px-3 py-2 text-sm font-bold text-[var(--color-text-primary)] hover:bg-gray-100 rounded-lg"
+              <Link
+                href="/signin"
+                className="flex-1 px-3 py-2 text-sm font-bold text-[var(--color-text-primary)] hover:bg-gray-100 rounded-lg text-center"
                 onClick={() => setMobileOpen(false)}
               >
-                Become a Host
-              </button>
+                Login
+              </Link>
               <Link
                 href="/signup"
                 className="flex-1 px-3 py-2 text-sm font-bold text-[var(--color-text-light)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] rounded-lg text-center"

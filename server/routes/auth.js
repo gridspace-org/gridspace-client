@@ -11,6 +11,7 @@ const {
   resetPassword,
   requestEmailVerification,
   verifyEmail,
+  resendEmailVerification,
   logout,
   refreshToken,
   deleteAccount,
@@ -28,6 +29,7 @@ router.post("/request-password-reset", requestPasswordReset);
 router.post("/reset-password", resetPassword);
 router.post("/request-email-verification", requestEmailVerification);
 router.post("/verify-email", verifyEmail);
+router.post("/resend-email-verification", resendEmailVerification);
 
 // Google OAuth routes
 router.post("/google", googleAuth);

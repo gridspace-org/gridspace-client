@@ -58,26 +58,26 @@ const TestimonialCard = ({
 const testimonials: TestimonialProps[] = [
   {
     image: "/ttmn1.png",
-    name: "John Morgan",
-    role: "Marketing Consultant",
+    name: "Chinedu Okonkwo",
+    role: "Freelancer Developer",
     content:
-      "Gridspace saved my business trip! Found a perfect workspace with reliable internet in minutes. The booking process was seamless.",
+      "Gridspace makes it easy to find reliable workspaces with power and internet. I don’t have to worry about constant disruptions anymore.",
     rating: 5,
   },
   {
     image: "/ttmn2.png",
-    name: "Jessica Wright",
-    role: "Freelancer Developer",
+    name: "Tolani Adeleke",
+    role: "Creative",
     content:
-      "As a freelancer, I need flexible workspaces. Gridspace's variety and quality are unmatched. Plus, the rates are very reasonable",
+      "As a designer, I love the creative vibe of the spaces I book on Gridspace. It’s affordable and keeps me inspired.",
     rating: 5,
   },
   {
     image: "/ttmn3.png",
-    name: "Derek Woods",
-    role: "Product Manager",
+    name: "Tunde Olukoya",
+    role: "Startup Founder",
     content:
-      "The verification process gives me confidence. Every space I've booked has been exactly as described. Excellent platform",
+      "My team now has a proper office without expensive leases. Gridspace gave us the flexibility we needed to grow",
     rating: 5,
   },
 ];

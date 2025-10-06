@@ -1,8 +1,10 @@
 "use client";
 
-import { AdminNav, AdminSidebar, AdminMainContent } from "../components";
 import RouteGuard from "../middleware/RouteGuard";
 import { useAppSelector } from "@/store/hooks";
+import AdminNav from "./AdminNav";
+import AdminMainContent from "./AdminMainContent";
+import AdminSidebar from "./AdminSidebar";
 
 export default function AdminDashboardPage() {
   const { user } = useAppSelector((state) => state.auth);

@@ -7,20 +7,24 @@ const emailVerificationSchema = new mongoose.Schema({
     lowercase: true,
     trim: true,
   },
-  token: {
+  otp: {
     type: String,
     required: true,
-    unique: true,
   },
   expiresAt: {
     type: Date,
     required: true,
     default: Date.now,
-    expires: 86400, // 24 hours
+    expires: 600, // 10 minutes (600 seconds)
   },
   verified: {
     type: Boolean,
     default: false,
+  },
+  attempts: {
+    type: Number,
+    default: 0,
+    max: 3, // Maximum 3 attempts
   },
   createdAt: {
     type: Date,
@@ -29,7 +33,7 @@ const emailVerificationSchema = new mongoose.Schema({
 });
 
 // Index for efficient queries
-emailVerificationSchema.index({ email: 1, token: 1 });
+emailVerificationSchema.index({ email: 1, otp: 1 });
 emailVerificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model("EmailVerification", emailVerificationSchema);

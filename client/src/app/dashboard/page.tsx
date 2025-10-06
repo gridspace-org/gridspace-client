@@ -6,11 +6,13 @@ import {
   Wallet,
   MessageCircle,
 } from "lucide-react";
-import { DashboardCard, DashboardNav, WorkspaceCard } from "../components";
-import RouteGuard from "../middleware/RouteGuard";
+import { useRouter } from "next/navigation";
+import {WorkspaceCard } from "../components";
+import DashboardCard from "./DashboardCard";
 import { useAppSelector } from "@/store/hooks";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { user } = useAppSelector((state) => state.auth);
   const userInfo = {
     name: user?.fullname || "User",
@@ -21,16 +23,13 @@ export default function DashboardPage() {
     wallet: "₦0", // This could be updated based on your wallet implementation
   };
 
+  const handleCardClick = (path: string) => {
+    router.push(path);
+  };
+
   return (
-    <RouteGuard allowedRoles={["user"]}>
-      <div className="min-h-screen bg-[#F7F5F5]">
-        {/* Navigation Bar */}
-        <DashboardNav
-          userName={userInfo.name}
-          memberSince={userInfo.memberSince}
-          profilePic={userInfo.avatar}
-        />
-        {/* Welcome Section */}
+    <>
+      {/* Welcome Section */}
         <div className="max-w-[1440px] mx-auto px-4 md:px-8 pt-4 pb-4">
           <div className="flex flex-col gap-1">
             <h1 className="text-[16px] leading-[19px] md:text-[32px] md:leading-[39px] font-bold text-[#002F5B]">
@@ -44,12 +43,13 @@ export default function DashboardPage() {
 
         {/* Dashboard Cards */}
         <div className="max-w-[1440px] mx-auto px-4 md:px-8 pb-6 md:pb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 w-full gap-4 md:gap-[23px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 max-md:hidden lg:grid-cols-4 w-full gap-4 md:gap-[23px]">
             <div className="w-full">
               <DashboardCard
                 icon={Search}
                 title="Find Workspace"
                 description="Search for available workspace"
+                onClick={() => handleCardClick("/dashboard/search")}
               />
             </div>
             <div className="w-full">
@@ -57,6 +57,7 @@ export default function DashboardPage() {
                 icon={Calendar}
                 title="My Bookings"
                 description="View Upcoming Bookings"
+                onClick={() => handleCardClick("/dashboard/bookings")}
               />
             </div>
             <div className="w-full">
@@ -64,6 +65,7 @@ export default function DashboardPage() {
                 icon={Wallet}
                 title="Wallet"
                 description={userInfo.wallet}
+                onClick={() => handleCardClick("/dashboard/wallet")}
               />
             </div>
             <div className="w-full">
@@ -71,6 +73,7 @@ export default function DashboardPage() {
                 icon={MessageCircle}
                 title="Message"
                 description="Chat with host"
+                onClick={() => handleCardClick("/dashboard/message")}
               />
             </div>
           </div>
@@ -93,7 +96,10 @@ export default function DashboardPage() {
                 <p className="text-[16px] md:text-[16px] font-medium text-[#6F6F6F] text-center">
                   No activity yet
                 </p>
-                <button className="flex items-center justify-center px-6 py-[10px] bg-[#F25417] text-white rounded-lg mt-2 w-[220px] h-10 md:w-[235px] md:h-[45px]">
+                <button 
+                  onClick={() => handleCardClick("/dashboard/search")}
+                  className="flex items-center justify-center px-6 py-[10px] bg-[#F25417] text-white rounded-lg mt-2 w-[220px] h-10 md:w-[235px] md:h-[45px] hover:bg-[#E0450F] transition-colors"
+                >
                   <span className="text-[16px] md:text-[18px] font-semibold">
                     Book your first Space
                   </span>
@@ -117,7 +123,6 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </div>
-    </RouteGuard>
+    </>
   );
 }

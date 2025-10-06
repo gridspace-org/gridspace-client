@@ -339,6 +339,7 @@ export default function SignUpPage() {
                 Already have an account?{" "}
                 <Link
                   href="/signin"
+                  prefetch={true}
                   className="text-[var(--color-primary)] font-medium hover:underline"
                 >
                   Sign In

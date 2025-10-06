@@ -25,18 +25,39 @@ export default function Footer() {
               Nigeria.
             </p>
             <div className="flex gap-4">
-              <FaFacebook
-                size={24}
-                className="cursor-pointer hover:text-[var(--color-primary)]"
-              />
-              <FaInstagram
-                size={24}
-                className="cursor-pointer hover:text-[var(--color-primary)]"
-              />
-              <FaXTwitter
-                size={24}
-                className="cursor-pointer hover:text-[var(--color-primary)]"
-              />
+              <a
+                href="https://www.facebook.com/share/1F2QTpoMLK/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Facebook"
+              >
+                <FaFacebook
+                  size={24}
+                  className="cursor-pointer hover:text-[var(--color-primary)]"
+                />
+              </a>
+              <a
+                href="https://www.instagram.com/gridspacecowork?igsh=ZTNxOGtraGIwbzQ4"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+              >
+                <FaInstagram
+                  size={24}
+                  className="cursor-pointer hover:text-[var(--color-primary)]"
+                />
+              </a>
+              <a
+                href="https://x.com/Gridspace_work?t=APeP2aXlXUb-LGNBMUgdcg&s=09"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="X (Twitter)"
+              >
+                <FaXTwitter
+                  size={24}
+                  className="cursor-pointer hover:text-[var(--color-primary)]"
+                />
+              </a>
             </div>
           </div>
 
@@ -103,14 +124,16 @@ export default function Footer() {
             <p className="text-[14px] lg:text-[16px] mb-4">
               Want to invest or collaborate? We&apos;re open to opportunities
             </p>
-            <Button
-              variant="primary"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              Contact Us
-              <Mail className="w-5 h-5" />
-            </Button>
+            <a href="mailto:info@gridspace.com" aria-label="Email GridSpace">
+              <Button
+                variant="primary"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                Contact Us
+                <Mail className="w-5 h-5" />
+              </Button>
+            </a>
           </div>
 
           <div>
@@ -120,7 +143,7 @@ export default function Footer() {
             <div className="space-y-3 text-[14px] lg:text-[16px]">
               <div className="flex items-center gap-2">
                 <Mail className="w-5 h-5" />
-                <span>hello@gridspace.com</span>
+                <span>info@gridspace.com</span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-5 h-5" />

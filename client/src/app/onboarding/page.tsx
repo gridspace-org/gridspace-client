@@ -175,29 +175,24 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        {/* Step 1: Role Selection */}
+        {/* Step 1: Role Selection (Refactored to Figma style) */}
         {currentStep === 1 && (
-          <div className="flex flex-col items-start gap-6 w-full">
-            <div className="flex flex-col items-start gap-4 md:gap-10 w-full">
-              {/* Looking for Spaces Card */}
+          <div className="w-full bg-white rounded-[8px] relative p-4 sm:p-6 lg:p-8">
+            <div className="flex flex-col items-start gap-6 sm:gap-6 lg:gap-6 w-full">
+              {/* Seeker Card */}
               <div
-                className={`w-full h-[124px] md:h-[220px] border border-[#D1D5DB] rounded-[8px] p-[42px_12px] md:p-[70px_37px] cursor-pointer transition-all duration-200 ${
-                  selectedRole === "seeker"
-                    ? "ring-2 ring-[#002F5B] bg-[#EDF6FF]"
-                    : "bg-white"
+                className={`w-full border border-[#D1D5DB] rounded-[8px] py-10 px-[37px] cursor-pointer transition-all duration-200 ${
+                  selectedRole === "seeker" ? "ring-2 ring-[#002F5B] bg-[#EDF6FF]" : "bg-white"
                 }`}
                 onClick={() => setSelectedRole("seeker")}
               >
-                <div className="flex flex-row justify-between items-center w-full">
-                  <div className="flex flex-row items-center gap-3 md:gap-6">
-                    {/* Icon */}
-                    <div className="w-[40px] h-[40px] md:w-[80px] md:h-[80px] bg-[#002F5B] rounded-[8px] flex items-center justify-center">
-                      <User className="w-6 h-6 md:w-[45.71px] md:h-[45.71px] text-white" />
+                <div className="flex flex-row items-center justify-between gap-6 w-full">
+                  <div className="flex flex-row items-center gap-6">
+                    <div className="w-[40px] h-[40px] md:w-[70px] md:h-[70px] min-w-[40px] min-h-[40px] md:min-w-[70px] md:min-h-[70px] bg-[#002F5B] rounded-[8px] flex items-center justify-center flex-shrink-0">
+                      <User className="w-6 h-6 md:w-10 md:h-10 text-white" />
                     </div>
-
-                    {/* Text Content */}
-                    <div className="flex flex-col items-start gap-[3px] md:gap-2">
-                      <h3 className="font-semibold text-[16px] md:text-[32px] leading-[19px] md:leading-[39px] text-[#002F5B]">
+                    <div className="flex flex-col justify-center items-start gap-2">
+                      <h3 className="font-semibold text-[16px] md:text-[24px] leading-[19px] md:leading-[29px] text-[#002F5B]">
                         I&apos;m looking for spaces
                       </h3>
                       <p className="font-normal text-[12px] md:text-[18px] leading-[15px] md:leading-[22px] text-[#686767]">
@@ -205,37 +200,30 @@ export default function OnboardingPage() {
                       </p>
                     </div>
                   </div>
-
-                  {/* Radio Button */}
                   <div
-                    className={`w-[20px] h-[20px] md:w-[33px] md:h-[33px] border-1 p-[2px] border-[#264582] rounded-full flex items-center justify-center bg-white`}
+                    className="w-5 h-5 md:w-[33px] md:h-[33px] min-w-5 min-h-5 md:min-w-[33px] md:min-h-[33px] border border-[#264582] rounded-full flex items-center justify-center bg-white flex-shrink-0"
                   >
                     {selectedRole === "seeker" && (
-                      <div className="w-full h-full bg-[#002F5B] rounded-full"></div>
+                      <div className="w-3 h-3 md:w-[21px] md:h-[21px] bg-[#002F5B] rounded-full" />
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Host Spaces Card */}
+              {/* Host Card */}
               <div
-                className={`w-full h-[124px] md:h-[220px] border border-[#D1D5DB] rounded-[8px] p-[42px_12px] md:p-[70px_37px] cursor-pointer transition-all duration-200 ${
-                  selectedRole === "host"
-                    ? "ring-2 ring-[#002F5B] bg-[#EDF6FF]"
-                    : "bg-white"
+                className={`w-full border border-[#D1D5DB] rounded-[8px] py-10 px-[37px] cursor-pointer transition-all duration-200 ${
+                  selectedRole === "host" ? "ring-2 ring-[#002F5B] bg-[#EDF6FF]" : "bg-white"
                 }`}
                 onClick={() => setSelectedRole("host")}
               >
-                <div className="flex flex-row justify-between items-center w-full">
-                  <div className="flex flex-row items-center gap-3 md:gap-6">
-                    {/* Icon */}
-                    <div className="w-[40px] h-[40px] md:w-[80px] md:h-[80px] bg-[#002F5B] rounded-[8px] flex items-center justify-center">
-                      <Grid3X3 className="w-6 h-6 md:w-[45.71px] md:h-[45.71px] text-white" />
+                <div className="flex flex-row items-center justify-between gap-6 w-full">
+                  <div className="flex flex-row items-center gap-6">
+                    <div className="w-[40px] h-[40px] md:w-[70px] md:h-[70px] min-w-[40px] min-h-[40px] md:min-w-[70px] md:min-h-[70px] bg-[#002F5B] rounded-[8px] flex items-center justify-center flex-shrink-0">
+                      <Grid3X3 className="w-6 h-6 md:w-10 md:h-10 text-white" />
                     </div>
-
-                    {/* Text Content */}
-                    <div className="flex flex-col items-start gap-[3px] md:gap-2">
-                      <h3 className="font-semibold text-[16px] md:text-[32px] leading-[19px] md:leading-[39px] text-[#002F5B]">
+                    <div className="flex flex-col justify-center items-start gap-2">
+                      <h3 className="font-semibold text-[16px] md:text-[24px] leading-[19px] md:leading-[29px] text-[#002F5B]">
                         I want to host spaces
                       </h3>
                       <p className="font-normal text-[12px] md:text-[18px] leading-[15px] md:leading-[22px] text-[#686767]">
@@ -243,13 +231,11 @@ export default function OnboardingPage() {
                       </p>
                     </div>
                   </div>
-
-                  {/* Radio Button */}
                   <div
-                    className={`w-[20px] h-[20px] md:w-[33px] md:h-[33px] border-1 p-[2px] border-[#264582] rounded-full flex items-center justify-center bg-white`}
+                    className="w-5 h-5 md:w-[33px] md:h-[33px] min-w-5 min-h-5 md:min-w-[33px] md:min-h-[33px] border border-[#264582] rounded-full flex items-center justify-center bg-white flex-shrink-0"
                   >
                     {selectedRole === "host" && (
-                      <div className="w-full h-full bg-[#002F5B] rounded-full"></div>
+                      <div className="w-3 h-3 md:w-[21px] md:h-[21px] bg-[#002F5B] rounded-full" />
                     )}
                   </div>
                 </div>

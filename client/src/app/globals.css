@@ -60,3 +60,12 @@
 body {
   font-family: var(--font-inter);
 }
+
+/* Ensure interactive elements show pointer cursor by default */
+button,
+[type="button"],
+[type="submit"],
+[role="button"],
+a {
+  cursor: pointer;
+}

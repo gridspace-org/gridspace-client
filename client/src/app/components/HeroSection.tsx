@@ -1,5 +1,6 @@
 import { ArrowRight, Users, MapPin, Medal, Calendar } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function HeroSection() {
   return (
@@ -18,6 +19,22 @@ export default function HeroSection() {
             high-speed internet, and everything you need to stay productive on
             the go.
           </p>
+        </div>
+
+        {/* Mobile Auth Actions */}
+        <div className="flex md:hidden items-center gap-3 mb-6">
+          <Link
+            href="/signin"
+            className="flex-1 px-3 py-2 text-sm font-bold text-[var(--color-text-primary)] bg-white hover:bg-gray-100 rounded-lg text-center"
+          >
+            Login
+          </Link>
+          <Link
+            href="/signup"
+            className="flex-1 px-3 py-2 text-sm font-bold text-[var(--color-text-light)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] rounded-lg text-center"
+          >
+            Sign Up
+          </Link>
         </div>
 
         {/* Search Bar */}
