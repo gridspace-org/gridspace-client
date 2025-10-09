@@ -211,7 +211,7 @@ export default function HostDashboardPage() {
                       className="flex flex-col justify-center items-start py-3 pb-6 gap-6 w-full border-b border-[#D1D5DB] last:border-b-0 lg:h-[256px]"
                     >
                       {/* Main content row */}
-                      <div className="flex flex-row items-center lg:justify-between py-3 gap-4 w-full lg:gap-16 lg:py-[13px] lg:h-[146px]">
+                      <div className="flex max-sm:flex-wrap flex-row items-center lg:justify-between py-3 gap-4 w-full lg:gap-16 lg:py-[13px] lg:h-[146px]">
                         {/* Image container */}
                         <div className="w-[99px] h-[92px] rounded-lg overflow-hidden flex-shrink-0 lg:w-[120px] lg:h-[120px]">
                           <Image

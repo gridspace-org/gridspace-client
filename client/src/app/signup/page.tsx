@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   User,
@@ -18,9 +17,9 @@ import Button from "../components/Button";
 import { useAppDispatch } from "@/store/hooks";
 import { signup } from "@/store/slices/authSlice";
 import GoogleAuthButton from "../components/GoogleAuthButton";
+import AuthLoader from "../components/AuthLoader";
 
 export default function SignUpPage() {
-  const router = useRouter();
   const dispatch = useAppDispatch();
   const [fullname, setFullname] = useState("");
   const [email, setEmail] = useState("");
@@ -30,6 +29,18 @@ export default function SignUpPage() {
   const [agree, setAgree] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showLoader, setShowLoader] = useState(false);
+  const [isGoogleFlow, setIsGoogleFlow] = useState(false);
+
+  // Show loader if authentication is successful
+  if (showLoader) {
+    return (
+      <AuthLoader
+        message={isGoogleFlow ? "Signing you in..." : "Creating your account..."}
+        redirectPath={isGoogleFlow ? undefined : "/onboarding"}
+      />
+    );
+  }
 
   return (
     <div className="h-[1024px] max-lg:h-fit max-lg:p-4 bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]">
@@ -105,8 +116,8 @@ export default function SignUpPage() {
                     })
                   ).unwrap();
 
-                  // If signup successful, redirect to onboarding
-                  router.push("/onboarding");
+                  // If signup successful, show loader
+                  setShowLoader(true);
                 } catch (err: unknown) {
                   const message =
                     err instanceof Error
@@ -319,6 +330,7 @@ export default function SignUpPage() {
                   text="Continue with Google"
                   className="flex-1"
                   onError={(error) => setError(error)}
+                  onSuccess={() => setShowLoader(true)}
                 />
                 <button className="flex-1 h-[56px] sm:h-[60px] px-4 py-3 rounded-lg border border-[var(--color-secondary)] flex items-center justify-center gap-2 transition-all duration-300 hover:bg-gray-100 hover:text-[var(--color-secondary)] hover:shadow-sm">
                   <Image
@@ -352,3 +364,6 @@ export default function SignUpPage() {
     </div>
   );
 }
+ 
+
+

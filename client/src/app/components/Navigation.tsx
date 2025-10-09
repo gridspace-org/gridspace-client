@@ -33,18 +33,18 @@ export default function Navigation() {
             >
               Host a Space
             </a>
-            <a
-              href="#"
-              className="text-sm text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
-            >
-              About
-            </a>
             <Link
               href="/blog"
               className="text-sm text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
             >
               Blog
             </Link>
+            <a
+              href="#"
+              className="text-sm text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
+            >
+              About
+            </a>
           </div>
           <Link href="/signin" className="hidden [@media(min-width:840px)]:inline-block px-3 md:px-4 py-2 text-sm font-bold text-[var(--color-text-primary)] hover:bg-gray-100 rounded-lg">
             Login
@@ -88,13 +88,6 @@ export default function Navigation() {
             >
               Host a Space
             </a>
-            <a
-              href="#"
-              className="text-sm text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
-              onClick={() => setMobileOpen(false)}
-            >
-              About
-            </a>
             <Link
               href="/blog"
               className="text-sm text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
@@ -102,6 +95,13 @@ export default function Navigation() {
             >
               Blog
             </Link>
+            <a
+              href="#"
+              className="text-sm text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
+              onClick={() => setMobileOpen(false)}
+            >
+              About
+            </a>
             <div className="flex items-center gap-3 pt-1">
               <Link
                 href="/signin"

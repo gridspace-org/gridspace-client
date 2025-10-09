@@ -2,16 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import Button from "../components/Button";
 import { useAppDispatch } from "@/store/hooks";
 import { signin } from "@/store/slices/authSlice";
 import GoogleAuthButton from "../components/GoogleAuthButton";
+import AuthLoader from "../components/AuthLoader";
 
 export default function SignInPage() {
-  const router = useRouter();
   const dispatch = useAppDispatch();
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
@@ -19,6 +18,12 @@ export default function SignInPage() {
   const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showLoader, setShowLoader] = useState(false);
+
+  // Show loader if authentication is successful
+  if (showLoader) {
+    return <AuthLoader message="Signing you in..." />;
+  }
 
   return (
     <div className="h-[1024px] max-lg:h-screen max-lg:p-4 bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]">
@@ -76,8 +81,8 @@ export default function SignInPage() {
                     })
                   ).unwrap();
 
-                  // If signin successful, redirect to dashboard
-                  router.push("/dashboard");
+                  // If signin successful, show loader
+                  setShowLoader(true);
                 } catch (err: unknown) {
                   const message =
                     err instanceof Error
@@ -196,6 +201,7 @@ export default function SignInPage() {
                   text="Continue with Google"
                   className="flex-1"
                   onError={(error) => setError(error)}
+                  onSuccess={() => setShowLoader(true)}
                 />
                 <button className="flex-1 h-[56px] sm:h-[60px] px-4 py-3 rounded-lg border border-[var(--color-secondary)] flex items-center justify-center gap-2 transition-all duration-300 hover:bg-gray-100 hover:text-[var(--color-secondary)] hover:shadow-sm">
                   <Image

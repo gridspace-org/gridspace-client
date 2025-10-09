@@ -6,7 +6,7 @@ export default function HeroSection() {
   return (
     <section className="flex flex-col md:flex-row items-center justify-center px-4 md:px-8 py-5 gap-8 max-w-[1440px] mx-auto">
       <div className="w-full md:w-1/2">
-        <div className="mb-[63px]">
+        <div className="mb-[63px] max-md:mb-10">
           <h1 className="max-sm:text-[32px] text-[56px] font-bold text-[var(--color-secondary)] mb-6 md:mb-8 leading-tight">
             Find a{" "}
             <span className="text-[var(--color-primary)]">

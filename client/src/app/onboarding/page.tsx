@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useAppDispatch } from "@/store/hooks";
 import { completeOnboarding } from "@/store/slices/authSlice";
+import AuthLoader from "../components/AuthLoader";
 
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -32,6 +33,7 @@ export default function OnboardingPage() {
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showLoader, setShowLoader] = useState(false);
   const router = useRouter();
   const dispatch = useAppDispatch();
 
@@ -73,18 +75,8 @@ export default function OnboardingPage() {
 
         await dispatch(completeOnboarding(onboardingData)).unwrap();
 
-        // Redirect to appropriate dashboard based on user role
-        const mappedRole = roleMapping[selectedRole] || selectedRole;
-        if (mappedRole === "host") {
-          router.push("/host-dashboard");
-        } else if (mappedRole === "user") {
-          router.push("/dashboard");
-        } else if (mappedRole === "admin") {
-          router.push("/admin-dashboard");
-        } else {
-          // Fallback to user dashboard if role is not recognized
-          router.push("/dashboard");
-        }
+        // Show loader after successful onboarding completion
+        setShowLoader(true);
       } catch (error: unknown) {
         console.error("Failed to complete onboarding:", error);
         const errorMessage = error instanceof Error ? error.message : "Failed to complete onboarding. Please try again.";
@@ -137,6 +129,11 @@ export default function OnboardingPage() {
       reader.readAsDataURL(file);
     }
   };
+
+  // Show loader if onboarding is completed successfully
+  if (showLoader) {
+    return <AuthLoader message="Setting up your dashboard..." />;
+  }
 
   return (
     <div className="min-h-screen bg-[#F7F5F5] flex items-center justify-center p-4">

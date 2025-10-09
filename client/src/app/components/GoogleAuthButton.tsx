@@ -82,12 +82,8 @@ export default function GoogleAuthButton({
 
         if (result) {
           onSuccess?.();
-          // Redirect based on onboarding status
-          if (result.user.onboardingCompleted) {
-            router.push("/dashboard");
-          } else {
-            router.push("/onboarding");
-          }
+          // Don't redirect here - let the parent component handle it with loader
+          // The parent will show AuthLoader which handles the redirect logic
         }
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : "Google authentication failed";

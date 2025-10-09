@@ -6,6 +6,7 @@ import { useAppDispatch } from "@/store/hooks";
 import { clearAuth } from "@/store/slices/authSlice";
 import Image from "next/image";
 import Link from "next/link";
+import AuthLoader from "../../components/AuthLoader";
 
 function AuthCallbackContent() {
   const router = useRouter();
@@ -21,15 +22,12 @@ function AuthCallbackContent() {
       const error = searchParams.get("error");
 
       if (success === "true" && token) {
-        // Store the token and redirect
+        // Store the token and show loader
         localStorage.setItem("authToken", token);
         setStatus("success");
         setMessage("Authentication successful! Redirecting...");
         
-        // Redirect to dashboard after a short delay
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 2000);
+        // The AuthLoader will handle the redirect logic
       } else if (success === "false" || error) {
         // Handle error
         setStatus("error");
@@ -49,7 +47,11 @@ function AuthCallbackContent() {
   }, [searchParams, router, dispatch]);
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-secondary)] flex items-center justify-center p-4">
+    <>
+      {status === "success" ? (
+        <AuthLoader message="Completing authentication..." />
+      ) : (
+        <div className="min-h-screen bg-[var(--color-bg-secondary)] flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
         <div className="mb-6">
           <Image
@@ -69,32 +71,6 @@ function AuthCallbackContent() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)] mx-auto"></div>
             <p className="text-[var(--color-text-secondary)]">
               Processing authentication...
-            </p>
-          </div>
-        )}
-
-        {status === "success" && (
-          <div className="space-y-4">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <svg
-                className="w-6 h-6 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <h2 className="text-xl font-semibold text-green-600">
-              Success!
-            </h2>
-            <p className="text-[var(--color-text-secondary)]">
-              {message}
             </p>
           </div>
         )}
@@ -140,6 +116,8 @@ function AuthCallbackContent() {
         )}
       </div>
     </div>
+      )}
+    </>
   );
 }
 
