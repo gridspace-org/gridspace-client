@@ -31,9 +31,29 @@ export default function ForgotPasswordPage() {
       // Redirect to OTP verification page
       router.push("/forgot-password/verify-otp");
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to send reset code. Please try again.";
-      alert(errorMessage);
       console.error("Error sending reset code:", error);
+      
+      let errorMessage = "Failed to send reset code. Please try again.";
+      
+      if (error instanceof Error) {
+        const message = error.message.toLowerCase();
+        
+        if (message.includes("user with this email does not exist")) {
+          errorMessage = "No account found with this email address. Please check your email or sign up for a new account.";
+        } else if (message.includes("invalid email")) {
+          errorMessage = "Please enter a valid email address.";
+        } else if (message.includes("network") || message.includes("connection")) {
+          errorMessage = "Connection failed. Please check your internet connection and try again.";
+        } else if (message.includes("server error") || message.includes("internal server error")) {
+          errorMessage = "Server error occurred. Please try again in a few moments.";
+        } else if (message.includes("rate limit") || message.includes("too many requests")) {
+          errorMessage = "Too many requests. Please wait a few minutes before trying again.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

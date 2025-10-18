@@ -9,6 +9,7 @@ const {
   changePassword,
   requestPasswordReset,
   resetPassword,
+  verifyPasswordResetOtp,
   requestEmailVerification,
   verifyEmail,
   resendEmailVerification,
@@ -27,6 +28,7 @@ router.post("/signup", upload.single("profilePic"), signup);
 router.post("/signin", signin);
 router.post("/request-password-reset", requestPasswordReset);
 router.post("/reset-password", resetPassword);
+router.post("/verify-password-reset-otp", verifyPasswordResetOtp);
 router.post("/request-email-verification", requestEmailVerification);
 router.post("/verify-email", verifyEmail);
 router.post("/resend-email-verification", resendEmailVerification);
@@ -55,9 +57,5 @@ router.post("/logout", authenticate, logout);
 router.post("/refresh-token", authenticate, refreshToken);
 router.delete("/account", authenticate, deleteAccount);
 
-// Test route (can be removed in production)
-router.get("/test", (req, res) => {
-  res.json({ message: "Auth routes are working!" });
-});
 
 module.exports = router;

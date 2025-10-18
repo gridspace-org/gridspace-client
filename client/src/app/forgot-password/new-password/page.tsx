@@ -13,10 +13,11 @@ export default function NewPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
-  // Check if we have a resetToken on mount
+  // Require verified email and OTP presence (from previous step)
   useEffect(() => {
+    const email = localStorage.getItem("resetEmail");
     const resetToken = localStorage.getItem("resetToken");
-    if (!resetToken) {
+    if (!email || !resetToken) {
       router.push("/forgot-password");
     }
   }, [router]);
@@ -30,9 +31,10 @@ export default function NewPasswordPage() {
       return;
     }
 
+    const email = localStorage.getItem("resetEmail");
     const resetToken = localStorage.getItem("resetToken");
-    if (!resetToken) {
-      alert("Reset token not found. Please request a new code.");
+    if (!email || !resetToken) {
+      alert("Session expired. Please request a new code.");
       router.push("/forgot-password");
       return;
     }
@@ -47,9 +49,29 @@ export default function NewPasswordPage() {
       // Redirect to success page
       router.push("/forgot-password/success");
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to reset password. Please try again.";
-      alert(errorMessage);
       console.error("Error setting new password:", error);
+      
+      let errorMessage = "Failed to reset password. Please try again.";
+      
+      if (error instanceof Error) {
+        const message = error.message.toLowerCase();
+        
+        if (message.includes("invalid or expired reset token")) {
+          errorMessage = "Reset session has expired. Please request a new password reset.";
+        } else if (message.includes("password must be at least")) {
+          errorMessage = "Password must be at least 6 characters long.";
+        } else if (message.includes("user not found")) {
+          errorMessage = "User account not found. Please request a new password reset.";
+        } else if (message.includes("network") || message.includes("connection")) {
+          errorMessage = "Connection failed. Please check your internet connection and try again.";
+        } else if (message.includes("server error") || message.includes("internal server error")) {
+          errorMessage = "Server error occurred. Please try again in a few moments.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

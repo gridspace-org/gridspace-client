@@ -1,13 +1,62 @@
-const { MailerSend, EmailParams, Sender, Recipient } = require('mailersend');
+const nodemailer = require('nodemailer');
 
 class EmailService {
   constructor() {
-    this.mailerSend = new MailerSend({
-      apiKey: process.env.MAILERSEND_API_KEY,
+    // Create transporter based on environment
+    this.transporter = this.createTransporter();
+    this.fromEmail = process.env.FROM_EMAIL || 'noreply@gridspace.com';
+    this.fromName = process.env.FROM_NAME || 'GridSpace';
+  }
+
+  /**
+   * Create nodemailer transporter based on environment variables
+   * @returns {Object} Nodemailer transporter
+   */
+  createTransporter() {
+    // For development, you can use a test account or SMTP
+    if (process.env.NODE_ENV === 'development' && process.env.SMTP_HOST) {
+      return nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT || 587,
+        secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+    }
+
+    // For production, use Gmail, Outlook, or other SMTP service
+    if (process.env.SMTP_SERVICE === 'gmail') {
+      return nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_APP_PASSWORD, // Use App Password for Gmail
+        },
+      });
+    }
+
+    if (process.env.SMTP_SERVICE === 'outlook') {
+      return nodemailer.createTransport({
+        service: 'hotmail',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+    }
+
+    // Generic SMTP configuration
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT) || 587,
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
     });
-    
-    this.fromEmail = process.env.MAILERSEND_FROM_EMAIL || 'noreply@gridspace.com';
-    this.fromName = process.env.MAILERSEND_FROM_NAME || 'GridSpace';
   }
 
   /**
@@ -19,22 +68,19 @@ class EmailService {
    */
   async sendOTPEmail(toEmail, otp, userName = 'User') {
     try {
-      const sentFrom = new Sender(this.fromEmail, this.fromName);
-      const recipients = [new Recipient(toEmail, userName)];
+      const mailOptions = {
+        from: `"${this.fromName}" <${this.fromEmail}>`,
+        to: toEmail,
+        subject: 'Verify Your Email - GridSpace',
+        html: this.getOTPEmailTemplate(otp, userName),
+        text: this.getOTPEmailTextTemplate(otp, userName),
+      };
 
-      const emailParams = new EmailParams()
-        .setFrom(sentFrom)
-        .setTo(recipients)
-        .setReplyTo(sentFrom)
-        .setSubject('Verify Your Email - GridSpace')
-        .setHtml(this.getOTPEmailTemplate(otp, userName))
-        .setText(this.getOTPEmailTextTemplate(otp, userName));
-
-      const response = await this.mailerSend.email.send(emailParams);
+      const result = await this.transporter.sendMail(mailOptions);
       
       return {
         success: true,
-        messageId: response.body.message_id,
+        messageId: result.messageId,
         message: 'OTP email sent successfully'
       };
     } catch (error) {
@@ -54,26 +100,21 @@ class EmailService {
    * @param {string} userName - User's name (optional)
    * @returns {Promise<Object>} Result of email sending
    */
-  async sendPasswordResetEmail(toEmail, resetToken, userName = 'User') {
+  async sendPasswordResetEmail(toEmail, resetOtp, userName = 'User') {
     try {
-      const sentFrom = new Sender(this.fromEmail, this.fromName);
-      const recipients = [new Recipient(toEmail, userName)];
-      
-      const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+      const mailOptions = {
+        from: `"${this.fromName}" <${this.fromEmail}>`,
+        to: toEmail,
+        subject: 'Reset Your Password - GridSpace',
+        html: this.getPasswordResetEmailTemplate(resetOtp, userName),
+        text: this.getPasswordResetEmailTextTemplate(resetOtp, userName),
+      };
 
-      const emailParams = new EmailParams()
-        .setFrom(sentFrom)
-        .setTo(recipients)
-        .setReplyTo(sentFrom)
-        .setSubject('Reset Your Password - GridSpace')
-        .setHtml(this.getPasswordResetEmailTemplate(resetUrl, userName))
-        .setText(this.getPasswordResetEmailTextTemplate(resetUrl, userName));
-
-      const response = await this.mailerSend.email.send(emailParams);
+      const result = await this.transporter.sendMail(mailOptions);
       
       return {
         success: true,
-        messageId: response.body.message_id,
+        messageId: result.messageId,
         message: 'Password reset email sent successfully'
       };
     } catch (error) {
@@ -82,6 +123,27 @@ class EmailService {
         success: false,
         error: error.message,
         message: 'Failed to send password reset email'
+      };
+    }
+  }
+
+  /**
+   * Test email configuration
+   * @returns {Promise<Object>} Test result
+   */
+  async testConnection() {
+    try {
+      await this.transporter.verify();
+      return {
+        success: true,
+        message: 'Email configuration is valid'
+      };
+    } catch (error) {
+      console.error('Email configuration test failed:', error);
+      return {
+        success: false,
+        error: error.message,
+        message: 'Email configuration test failed'
       };
     }
   }
@@ -226,7 +288,7 @@ This email was sent by GridSpace. If you didn't create an account, please ignore
    * @param {string} userName - User's name
    * @returns {string} HTML email template
    */
-  getPasswordResetEmailTemplate(resetUrl, userName) {
+  getPasswordResetEmailTemplate(resetOtp, userName) {
     return `
       <!DOCTYPE html>
       <html>
@@ -260,15 +322,20 @@ This email was sent by GridSpace. If you didn't create an account, please ignore
             color: #2563eb;
             margin-bottom: 10px;
           }
-          .reset-button {
-            display: inline-block;
-            background-color: #2563eb;
-            color: white;
-            padding: 15px 30px;
-            text-decoration: none;
+          .otp-container {
+            background-color: #f8fafc;
+            border: 2px dashed #cbd5e1;
             border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin: 30px 0;
+          }
+          .otp-code {
+            font-size: 28px;
             font-weight: bold;
-            margin: 20px 0;
+            color: #2563eb;
+            letter-spacing: 4px;
+            font-family: 'Courier New', monospace;
           }
           .warning {
             background-color: #fef3c7;
@@ -296,18 +363,18 @@ This email was sent by GridSpace. If you didn't create an account, please ignore
           
           <p>Hello ${userName},</p>
           
-          <p>We received a request to reset your password for your GridSpace account. Click the button below to reset your password:</p>
-          
-          <div style="text-align: center;">
-            <a href="${resetUrl}" class="reset-button">Reset Password</a>
+          <p>We received a request to reset your password for your GridSpace account. Use the code below to complete your password reset in the app:</p>
+
+          <div class="otp-container">
+            <p style="margin: 0 0 10px 0; color: #6b7280;">Your password reset code:</p>
+            <div class="otp-code">${resetOtp}</div>
           </div>
           
           <div class="warning">
-            <strong>Important:</strong> This link will expire in 1 hour for security reasons. If you didn't request a password reset, please ignore this email.
+            <strong>Important:</strong> This code will expire in 1 hour for security reasons. If you didn't request a password reset, please ignore this email.
           </div>
           
-          <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-          <p style="word-break: break-all; color: #2563eb;">${resetUrl}</p>
+          <p>If you're having trouble, copy and paste the code directly into the password reset form.</p>
           
           <div class="footer">
             <p>This email was sent by GridSpace. If you didn't request a password reset, please ignore this email.</p>
@@ -325,17 +392,17 @@ This email was sent by GridSpace. If you didn't create an account, please ignore
    * @param {string} userName - User's name
    * @returns {string} Text email template
    */
-  getPasswordResetEmailTextTemplate(resetUrl, userName) {
+  getPasswordResetEmailTextTemplate(resetOtp, userName) {
     return `
 GridSpace - Password Reset
 
 Hello ${userName},
 
-We received a request to reset your password for your GridSpace account. Click the link below to reset your password:
+We received a request to reset your password for your GridSpace account. Use the code below to complete your password reset in the app:
 
-${resetUrl}
+Your password reset code: ${resetOtp}
 
-Important: This link will expire in 1 hour for security reasons. If you didn't request a password reset, please ignore this email.
+Important: This code will expire in 1 hour for security reasons. If you didn't request a password reset, please ignore this email.
 
 ---
 This email was sent by GridSpace. If you didn't request a password reset, please ignore this email.

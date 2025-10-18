@@ -119,11 +119,7 @@ export default function SignUpPage() {
                   // If signup successful, show loader
                   setShowLoader(true);
                 } catch (err: unknown) {
-                  const message =
-                    err instanceof Error
-                      ? err.message
-                      : "Failed to sign up. Please try again.";
-                  setError(message);
+                  setError(err as string | null);
                 } finally {
                   setIsSubmitting(false);
                 }

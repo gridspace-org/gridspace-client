@@ -78,6 +78,9 @@ export default function VerifyOTPPage() {
             <p className="text-[18px] leading-[22px] max-md:text-[14px] max-md:leading-[18px] max-sm:text-[12px] max-sm:leading-[16px] text-[#686767] text-center max-w-[518px] max-md:max-w-[90%] max-sm:max-w-[95%]">
               Enter the verification code sent to your email address
             </p>
+            <p className="text-[14px] leading-[18px] max-md:text-[12px] max-md:leading-[16px] max-sm:text-[10px] max-sm:leading-[14px] text-[#9CA3AF] text-center max-w-[518px] max-md:max-w-[90%] max-sm:max-w-[95%]">
+              Can't find the email? Please check your spam folder
+            </p>
           </div>
 
           {/* OTP Input Section */}
@@ -119,12 +122,10 @@ export default function VerifyOTPPage() {
                 onClick={async () => {
                   if (isOtpComplete) {
                     const code = otp.join("");
-                    const resetToken = localStorage.getItem("resetToken");
+                    const email = localStorage.getItem("resetEmail") || "";
 
-                    if (!resetToken) {
-                      alert(
-                        "Reset token not found. Please request a new code."
-                      );
+                    if (!email) {
+                      alert("Email not found. Please request a new code.");
                       router.push("/forgot-password");
                       return;
                     }
@@ -132,22 +133,32 @@ export default function VerifyOTPPage() {
                     setIsVerifying(true);
 
                     try {
-                      // Server currently expects a numeric token to match for resetting password
-                      // This is simplified for demo - in production, this would be more secure
-                      if (resetToken !== code) {
-                        throw new Error("Invalid verification code");
-                      }
-
-                      // Navigate to new password page
+                      await api.verifyPasswordResetOtp(email, code);
                       router.push("/forgot-password/new-password");
                     } catch (error: unknown) {
-                      const errorMessage =
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to verify code. Please try again.";
-                      alert(errorMessage);
                       console.error("Error verifying OTP:", error);
-                      // Clear invalid OTP
+                      
+                      let errorMessage = "Failed to verify code. Please try again.";
+                      
+                      if (error instanceof Error) {
+                        const message = error.message.toLowerCase();
+                        
+                        if (message.includes("invalid or expired verification code")) {
+                          errorMessage = "Invalid or expired verification code. Please request a new code.";
+                        } else if (message.includes("verification code expired")) {
+                          errorMessage = "Verification code has expired. Please request a new code.";
+                        } else if (message.includes("invalid verification code")) {
+                          errorMessage = "Invalid verification code. Please check the code and try again.";
+                        } else if (message.includes("network") || message.includes("connection")) {
+                          errorMessage = "Connection failed. Please check your internet connection and try again.";
+                        } else if (message.includes("server error") || message.includes("internal server error")) {
+                          errorMessage = "Server error occurred. Please try again in a few moments.";
+                        } else {
+                          errorMessage = error.message;
+                        }
+                      }
+                      
+                      alert(errorMessage);
                       setOtp(["", "", "", "", "", ""]);
                       inputRefs.current[0]?.focus();
                     } finally {
@@ -160,7 +171,7 @@ export default function VerifyOTPPage() {
                 <ArrowRight className="w-[18px] h-[18px]" />
               </button>
             </div>
-
+            
             {/* Bottom Links */}
             <div className="justify-center flex flex-col items-center gap-4 max-md:gap-3 max-sm:gap-2 max-md:w-full">
               {/* Back to Sign In Link */}
@@ -191,10 +202,26 @@ export default function VerifyOTPPage() {
                       setOtp(["", "", "", "", "", ""]);
                       inputRefs.current[0]?.focus();
                     } catch (error: unknown) {
-                      const errorMessage =
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to resend code. Please try again.";
+                      console.error("Error resending code:", error);
+                      
+                      let errorMessage = "Failed to resend code. Please try again.";
+                      
+                      if (error instanceof Error) {
+                        const message = error.message.toLowerCase();
+                        
+                        if (message.includes("user with this email does not exist")) {
+                          errorMessage = "No account found with this email. Please go back and enter the correct email.";
+                        } else if (message.includes("rate limit") || message.includes("too many requests")) {
+                          errorMessage = "Too many requests. Please wait a few minutes before requesting a new code.";
+                        } else if (message.includes("network") || message.includes("connection")) {
+                          errorMessage = "Connection failed. Please check your internet connection and try again.";
+                        } else if (message.includes("server error") || message.includes("internal server error")) {
+                          errorMessage = "Server error occurred. Please try again in a few moments.";
+                        } else {
+                          errorMessage = error.message;
+                        }
+                      }
+                      
                       alert(errorMessage);
                     } finally {
                       setIsResending(false);

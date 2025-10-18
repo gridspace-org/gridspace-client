@@ -359,25 +359,28 @@ const requestPasswordReset = async (req, res) => {
     }
 
     // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString("hex");
+    // const resetToken = crypto.randomBytes(32).toString("hex");
 
-    // Save reset token to database
+    // Generate 6-digit OTP for password reset (valid for 60 minutes)
+    const { otp, expiresAt } = generateSecureOTP(6, 60);
+
+    // Save OTP to database as the reset token
     await PasswordReset.create({
       email: email.toLowerCase(),
-      token: resetToken,
-      expiresAt: new Date(Date.now() + 3600000), // 1 hour from now
+      token: otp,
+      expiresAt,
     });
 
     // Send password reset email
     const emailResult = await emailService.sendPasswordResetEmail(
       email.toLowerCase(),
-      resetToken,
+      otp,
       user.fullname
     );
 
     if (!emailResult.success) {
       // If email sending fails, clean up the database record
-      await PasswordReset.deleteOne({ email: email.toLowerCase(), token: resetToken });
+      await PasswordReset.deleteOne({ email: email.toLowerCase(), token: otp });
       
       return res.status(500).json({
         success: false,
@@ -389,6 +392,7 @@ const requestPasswordReset = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Password reset email sent to your email address",
+      resetToken: otp,
     });
   } catch (error) {
     res.status(500).json({
@@ -457,6 +461,45 @@ const resetPassword = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+// Verify password reset OTP (without consuming it)
+const verifyPasswordResetOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide email and OTP",
+      });
+    }
+
+    const record = await PasswordReset.findOne({
+      email: email.toLowerCase(),
+      token: otp,
+      used: false,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!record) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired verification code",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP verified",
+    });
+  } catch (error) {
+    return res.status(500).json({
       success: false,
       message: "Internal server error",
       error: error.message,
@@ -1069,6 +1112,7 @@ module.exports = {
   changePassword,
   requestPasswordReset,
   resetPassword,
+  verifyPasswordResetOtp,
   requestEmailVerification,
   verifyEmail,
   resendEmailVerification,

@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch } from "@/store/hooks";
 import { googleAuth } from "@/store/slices/authSlice";
+import axios from "axios";
 
 interface UseGoogleAuthOptions {
   onSuccess?: () => void;
@@ -46,9 +47,8 @@ export const useGoogleAuth = (options: UseGoogleAuthOptions = {}) => {
 
   const getGoogleAuthUrl = useCallback(async () => {
     try {
-      const response = await fetch("/api/auth/google/url");
-      const data = await response.json();
-      return data.authUrl;
+      const response = await axios.get("/api/auth/google/url");
+      return response.data.authUrl;
     } catch (error) {
       console.error("Failed to get Google auth URL:", error);
       throw error;

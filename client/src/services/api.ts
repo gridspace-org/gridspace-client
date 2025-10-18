@@ -1,3 +1,5 @@
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
+
 interface SignupData {
   fullname: string;
   email: string;
@@ -49,135 +51,114 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://gridspace-backend.onrender.com/api";
 
 class ApiService {
-  private baseURL: string;
+  private axiosInstance: AxiosInstance;
 
   constructor() {
-    this.baseURL = API_BASE_URL;
-  }
+    this.axiosInstance = axios.create({
+      baseURL: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-  // Helper method to get auth headers
-  private getAuthHeaders(): HeadersInit {
-    const token = localStorage.getItem("authToken");
-    return {
-      "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
-    };
+    // Add request interceptor for auth headers
+    this.axiosInstance.interceptors.request.use((config) => {
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    });
+
+    // Add response interceptor for logging only
+    this.axiosInstance.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        console.error("API Error:", {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          url: error.config?.url,
+          data: error.response?.data,
+          message: error.message,
+        });
+        
+        // Don't throw here - let individual methods handle errors
+        return Promise.reject(error);
+      }
+    );
   }
 
   // Helper method to handle responses
-  private async handleResponse<T>(response: Response): Promise<T> {
-    let responseText: string = "";
+  private async handleResponse<T>(response: AxiosResponse): Promise<T> {
+    console.log("API Response:", {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.config.url,
+      data: response.data,
+    });
 
-    try {
-      // First get the raw text of the response
-      responseText = await response.text();
+    return response.data as T;
+  }
 
-      // Try to parse it as JSON
-      let data;
-      try {
-        data = responseText ? JSON.parse(responseText) : null;
-      } catch {
-        console.error("Failed to parse JSON response:", responseText);
-        throw new Error("Invalid response format from server");
-      }
-
-      // Log the response for debugging
-      console.log("API Response:", {
-        status: response.status,
-        statusText: response.statusText,
-        url: response.url,
-        data: data,
-      });
-
-      // Handle unsuccessful responses
-      if (!response.ok) {
-        const errorMessage =
-          data?.message ||
-          data?.error ||
-          responseText ||
-          `${response.status} ${response.statusText}`;
-        throw new Error(errorMessage);
-      }
-
-      return data as T;
-    } catch (error: unknown) {
-      // Log detailed error information
-      console.error("API Error:", {
-        status: response.status,
-        statusText: response.statusText,
-        url: response.url,
-        responseText: responseText,
-        error: error instanceof Error ? error.message : String(error),
-      });
-
-      // Throw a user-friendly error
-      if (!response.ok) {
-        const message =
-          error instanceof Error ? error.message : "Server error occurred";
-        throw new Error(message);
-      }
-      throw new Error("Failed to process server response");
-    }
+  // Helper method to handle errors
+  private handleError(error: any): never {
+    console.error("API Error in handleError:", error);
+    
+    // Extract server error message from response data
+    const serverMessage = error.response?.data?.message || error.response?.data?.error;
+    const errorMessage = serverMessage || error.message || "Server error occurred";
+    
+    console.log("Extracted server message:", serverMessage);
+    console.log("Final error message:", errorMessage);
+    
+    throw new Error(errorMessage);
   }
 
   // Auth endpoints
   async signup(userData: SignupData): Promise<ApiResponse> {
-    console.log("Signup request:", { ...userData, password: "***" });
-    console.log("API URL:", `${this.baseURL}/auth/signup`);
+    try {
+      console.log("Signup request:", { ...userData, password: "***" });
+      console.log("API URL:", `${this.axiosInstance.defaults.baseURL}/auth/signup`);
 
-    const response = await fetch(`${this.baseURL}/auth/signup`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+      const response = await this.axiosInstance.post('/auth/signup', {
         fullname: userData.fullname,
         email: userData.email,
         password: userData.password,
         phonenumber: userData.phonenumber,
-      }),
-    });
+      });
 
-    return this.handleResponse(response);
+      return this.handleResponse(response);
+    } catch (error) {
+      console.error("Signup error caught:", error);
+      this.handleError(error);
+    }
   }
 
   async signin(credentials: SigninCredentials): Promise<ApiResponse> {
     try {
       console.log("Signin request:", {
-        url: `${this.baseURL}/auth/signin`,
+        url: `${this.axiosInstance.defaults.baseURL}/auth/signin`,
         email: credentials.email,
         hasPassword: !!credentials.password,
       });
 
-      const response = await fetch(`${this.baseURL}/auth/signin`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(credentials),
-      });
+      const response = await this.axiosInstance.post('/auth/signin', credentials);
 
       console.log("Raw signin response:", {
         status: response.status,
         statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
+        headers: response.headers,
       });
 
       return this.handleResponse(response);
-    } catch (networkError) {
-      console.error("Network error during signin:", networkError);
-      throw new Error(
-        "Failed to connect to the server. Please check your internet connection."
-      );
+    } catch (error) {
+      console.error("Signin error caught:", error);
+      this.handleError(error);
     }
   }
 
   async getProfile(): Promise<ApiResponse> {
-    const response = await fetch(`${this.baseURL}/auth/profile`, {
-      method: "GET",
-      headers: this.getAuthHeaders(),
-    });
-
+    const response = await this.axiosInstance.get('/auth/profile');
     return this.handleResponse(response);
   }
 
@@ -190,14 +171,10 @@ class ApiService {
     if (profileData.profilePic)
       formData.append("profilePic", profileData.profilePic);
 
-    const response = await fetch(`${this.baseURL}/auth/profile`, {
-      method: "PUT",
+    const response = await this.axiosInstance.put('/auth/profile', formData, {
       headers: {
-        ...(localStorage.getItem("authToken") && {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        }),
+        'Content-Type': 'multipart/form-data',
       },
-      body: formData,
     });
 
     return this.handleResponse(response);
@@ -219,136 +196,95 @@ class ApiService {
       formData.append("profilePic", onboardingData.profilePic);
     }
 
-    const response = await fetch(`${this.baseURL}/auth/onboarding`, {
-      method: "POST",
+    const response = await this.axiosInstance.post('/auth/onboarding', formData, {
       headers: {
-        ...(localStorage.getItem("authToken") && {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        }),
+        'Content-Type': 'multipart/form-data',
       },
-      body: formData,
     });
 
     return this.handleResponse(response);
   }
 
   async changePassword(passwordData: PasswordData): Promise<ApiResponse> {
-    const response = await fetch(`${this.baseURL}/auth/change-password`, {
-      method: "PUT",
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(passwordData),
-    });
-
+    const response = await this.axiosInstance.put('/auth/change-password', passwordData);
     return this.handleResponse(response);
   }
 
   async requestPasswordReset(
     email: string
   ): Promise<ApiResponse<{ resetToken: string }>> {
-    const response = await fetch(
-      `${this.baseURL}/auth/request-password-reset`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      }
-    );
-
-    return this.handleResponse(response);
+    try {
+      const response = await this.axiosInstance.post('/auth/request-password-reset', { email });
+      return this.handleResponse(response);
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   async resetPassword(resetData: ResetData): Promise<ApiResponse> {
-    const response = await fetch(`${this.baseURL}/auth/reset-password`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(resetData),
-    });
+    try {
+      const response = await this.axiosInstance.post('/auth/reset-password', { 
+        token: resetData.token, 
+        newPassword: resetData.password 
+      });
+      return this.handleResponse(response);
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
 
-    return this.handleResponse(response);
+  async verifyPasswordResetOtp(
+    email: string,
+    otp: string
+  ): Promise<ApiResponse> {
+    try {
+      const response = await this.axiosInstance.post('/auth/verify-password-reset-otp', { email, otp });
+      return this.handleResponse(response);
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   async requestEmailVerification(email: string): Promise<ApiResponse> {
-    const response = await fetch(
-      `${this.baseURL}/auth/request-email-verification`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      }
-    );
-
+    const response = await this.axiosInstance.post('/auth/request-email-verification', { email });
     return this.handleResponse(response);
   }
 
   async verifyEmail(token: string): Promise<ApiResponse> {
-    const response = await fetch(`${this.baseURL}/auth/verify-email`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ token }),
-    });
-
+    const response = await this.axiosInstance.post('/auth/verify-email', { token });
     return this.handleResponse(response);
   }
 
   async refreshToken(): Promise<ApiResponse> {
-    const response = await fetch(`${this.baseURL}/auth/refresh-token`, {
-      method: "POST",
-      headers: this.getAuthHeaders(),
-    });
-
+    const response = await this.axiosInstance.post('/auth/refresh-token');
     return this.handleResponse(response);
   }
 
   async logout(): Promise<ApiResponse> {
-    const response = await fetch(`${this.baseURL}/auth/logout`, {
-      method: "POST",
-      headers: this.getAuthHeaders(),
-    });
-
+    const response = await this.axiosInstance.post('/auth/logout');
     return this.handleResponse(response);
   }
 
   async deleteAccount(password: string): Promise<ApiResponse> {
-    const response = await fetch(`${this.baseURL}/auth/account`, {
-      method: "DELETE",
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify({ password }),
+    const response = await this.axiosInstance.delete('/auth/account', { 
+      data: { password } 
     });
-
     return this.handleResponse(response);
   }
 
   // Google OAuth endpoints
   async googleAuth(googleData: GoogleAuthData): Promise<ApiResponse> {
     console.log("Google Auth request:", {
-      url: `${this.baseURL}/auth/google`,
+      url: `${this.axiosInstance.defaults.baseURL}/auth/google`,
       hasIdToken: !!googleData.idToken,
     });
 
-    const response = await fetch(`${this.baseURL}/auth/google`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(googleData),
-    });
-
+    const response = await this.axiosInstance.post('/auth/google', googleData);
     return this.handleResponse(response);
   }
 
   async getGoogleAuthUrl(): Promise<ApiResponse<{ authUrl: string }>> {
-    const response = await fetch(`${this.baseURL}/auth/google/url`, {
-      method: "GET",
-    });
-
+    const response = await this.axiosInstance.get('/auth/google/url');
     return this.handleResponse(response);
   }
 }

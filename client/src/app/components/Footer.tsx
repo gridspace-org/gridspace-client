@@ -124,7 +124,7 @@ export default function Footer() {
             <p className="text-[14px] lg:text-[16px] mb-4">
               Want to invest or collaborate? We&apos;re open to opportunities
             </p>
-            <a href="mailto:info@gridspace.com" aria-label="Email GridSpace">
+            <a href="mailto:info@gridspace.com.ng" aria-label="Email GridSpace">
               <Button
                 variant="primary"
                 size="sm"
@@ -143,7 +143,7 @@ export default function Footer() {
             <div className="space-y-3 text-[14px] lg:text-[16px]">
               <div className="flex items-center gap-2">
                 <Mail className="w-5 h-5" />
-                <span>info@gridspace.com</span>
+                <span>info@gridspace.com.ng</span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-5 h-5" />

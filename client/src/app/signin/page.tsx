@@ -83,12 +83,8 @@ export default function SignInPage() {
 
                   // If signin successful, show loader
                   setShowLoader(true);
-                } catch (err: unknown) {
-                  const message =
-                    err instanceof Error
-                      ? err.message
-                      : "Failed to sign in. Please check your credentials and try again.";
-                  setError(message);
+                } catch (err: unknown) {                  
+                  setError(err as string | null);
                 } finally {
                   setIsSubmitting(false);
                 }

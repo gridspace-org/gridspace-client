@@ -1,112 +1,140 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
-import AdminListingRow from "./AdminListingRow";
+import { Calendar, Home, Users, BookOpen, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { useAppSelector } from "@/store/hooks";
 
 export default function AdminMainContent() {
-  const [listings] = useState([
-    {
-      id: 1,
-      image: "/space1.png",
-      name: "Urban Coworking Hub",
-      location: "Victoria Island, Lagos",
-      hostName: "Deba Derek",
-      hostEmail: "derek45@gmail.com",
-      submittedDate: "July 2nd, 2025",
-      status: "pending" as const,
-    },
-    {
-      id: 2,
-      image: "/space2.png",
-      name: "Urban Coworking Hub",
-      location: "Victoria Island, Lagos",
-      hostName: "Deba Derek",
-      hostEmail: "derek45@gmail.com",
-      submittedDate: "July 2nd, 2025",
-      status: "approved" as const,
-    },
-    {
-      id: 3,
-      image: "/space3.png",
-      name: "Urban Coworking Hub",
-      location: "Victoria Island, Lagos",
-      hostName: "Deba Derek",
-      hostEmail: "derek45@gmail.com",
-      submittedDate: "July 2nd, 2025",
-      status: "rejected" as const,
-    },
-  ]);
-
-  const handleView = (id: number) => {
-    console.log("View listing:", id);
-  };
-
-  const handleApprove = (id: number) => {
-    console.log("Approve listing:", id);
-  };
-
-  const handleReject = (id: number) => {
-    console.log("Reject listing:", id);
-  };
+  const { user } = useAppSelector((state) => state.auth);
+  const firstName = (user?.fullname || "Admin").split(" ")[0];
 
   return (
-    <div className="flex-1">
-      {/* Header with title and filter */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4 sm:gap-0">
-        <h2 className="text-lg sm:text-xl md:text-2xl lg:text-[24px] font-semibold text-[#002F5B]">
-          Listing Management
-        </h2>
-
-        <div className="flex items-center px-3 py-3 gap-2 sm:gap-[162px] w-full sm:w-[290px] h-[50px] bg-white border border-[#D8D8D9] rounded-lg">
-          <span className="text-sm sm:text-[16px] text-[#121212]">
-            All Statuses
-          </span>
-          <ChevronDown className="w-4 h-4 sm:w-6 sm:h-6 text-[#121212] ml-auto" />
+    <section className="flex flex-col items-start gap-4 md:gap-8 w-full">
+      {/* Top welcome row - mobile sizing per figma */}
+      <div className="flex items-center gap-2 w-full">
+        <ArrowRight className="w-6 h-6 text-[#121212] rotate-180" />
+        <div className="flex flex-col gap-1 w-full max-w-[355px] md:max-w-[460px]">
+          <h2 className="text-[20px] md:text-[32px] leading-[24px] md:leading-[39px] font-bold text-[#002F5B]">
+            Welcome {firstName}!
+          </h2>
+          <p className="text-[14px] md:text-[18px] leading-[17px] md:leading-[22px] tracking-[-0.25px] text-[#686767]">
+            Manage your workspace users and gridspace activities
+          </p>
         </div>
       </div>
 
-      {/* Listings Table */}
-      <div className="w-full h-auto lg:h-[425px] bg-white shadow-sm rounded-lg overflow-x-auto">
-        <table className="min-w-[800px] w-full">
-          <thead>
-            <tr className="border-b border-[#D8D8D9]">
-              <th className="text-left px-4 py-4 text-sm sm:text-base lg:text-[18px] font-semibold text-[#002F5B]">
-                Space Details
-              </th>
-              <th className="text-left px-4 py-4 text-sm sm:text-base lg:text-[18px] font-semibold text-[#002F5B]">
-                Host
-              </th>
-              <th className="text-left px-4 py-4 text-sm sm:text-base lg:text-[18px] font-semibold text-[#002F5B]">
-                Submitted
-              </th>
-              <th className="text-left px-4 py-4 text-sm sm:text-base lg:text-[18px] font-semibold text-[#002F5B]">
-                Status
-              </th>
-              <th className="text-left px-4 py-4 text-sm sm:text-base lg:text-[18px] font-semibold text-[#002F5B]">
-                Action
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {listings.map((listing) => (
-              <AdminListingRow
-                key={listing.id}
-                image={listing.image}
-                name={listing.name}
-                location={listing.location}
-                hostName={listing.hostName}
-                hostEmail={listing.hostEmail}
-                submittedDate={listing.submittedDate}
-                status={listing.status}
-                onView={() => handleView(listing.id)}
-                onApprove={() => handleApprove(listing.id)}
-                onReject={() => handleReject(listing.id)}
-              />
-            ))}
-          </tbody>
-        </table>
+      {/* Primary cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-[23px]  w-full">
+        <InfoCard
+          href="/admin-dashboard/listings"
+          icon={<Home className="w-8 h-8 md:w-10 md:h-10 text-[#002F5B]" />}
+          title="Listing Management"
+          subtitle="Manage host listings"
+        />
+        <InfoCard
+          href="/admin-dashboard/users"
+          icon={<Users className="w-8 h-8 md:w-10 md:h-10 text-[#002F5B]" />}
+          title="User Management"
+          subtitle="Manage host and guest"
+        />
+        <InfoCard
+          href="/admin-dashboard/bookings"
+          icon={<Calendar className="w-8 h-8 md:w-10 md:h-10 text-[#002F5B]" />}
+          title="Booking Management"
+          subtitle="Currently in progress"
+        />
+        <InfoCard
+          href="/admin-dashboard/blog"
+          icon={<BookOpen className="w-8 h-8 md:w-10 md:h-10 text-[#002F5B]" />}
+          title="Blog"
+          subtitle="Create and manage blog"
+        />
+      </div>
+
+      {/* Summary cards row */}
+      <div className="grid grid-cols-1 gap-[21px] w-full lg:flex lg:flex-row lg:items-center lg:justify-between">
+        <SummaryCard
+          value="0"
+          label="Total Listings"
+          hint="8 Pending Approval"
+          icon={<Home className="w-8 h-8 text-[#002F5B]" />}
+        />
+        <SummaryCard
+          value="0"
+          label="Total Users"
+          hint="Host and Guest combined"
+          icon={<Users className="w-8 h-8 text-[#002F5B]" />}
+        />
+        <SummaryCard
+          value="0"
+          label="Active Bookings"
+          hint="Currently in progress"
+          icon={<Calendar className="w-8 h-8 text-[#002F5B]" />}
+        />
+        <SummaryCard
+          value="₦0"
+          label="Monthly Revenue"
+          hint="0%"
+          icon={<ArrowRight className="w-8 h-8 text-[#50BF7A]" />}
+          hintClass="text-[#50BF7A]"
+        />
+      </div>
+    </section>
+  );
+}
+
+function InfoCard({
+  href,
+  icon,
+  title,
+  subtitle,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="box-border flex flex-col justify-center items-center p-2.5 gap-3 min-w-[240px] w-full h-[171px] md:w-full bg-white border border-[#D1D5DB]/100 shadow-[0px_4px_4px_rgba(222,222,222,0.25)] rounded-[12px] cursor-pointer hover:shadow-md transition-shadow"
+    >
+      <div className="flex items-center justify-center">{icon}</div>
+      <div className="flex flex-col items-center gap-2 w-fit">
+        <h3 className="text-[18px] leading-[22px] font-bold text-[#002F5B] text-center">{title}</h3>
+        <p className="text-[14px] leading-[17px] tracking-[-0.25px] text-[#686767] text-center">{subtitle}</p>
+      </div>
+    </Link>
+  );
+}
+
+function SummaryCard({
+  value,
+  label,
+  hint,
+  icon,
+  hintClass,
+}: {
+  value: string;
+  label: string;
+  hint: string;
+  icon: React.ReactNode;
+  hintClass?: string;
+}) {
+  return (
+    <div className="flex flex-col justify-center items-center p-[26px_20px] gap-2 w-full h-[172px] bg-white shadow-[0px_4px_4px_rgba(222,222,222,0.25)] rounded-[8px]">
+      <div className="flex items-center justify-between w-full">
+        <div className="flex flex-col items-start gap-4 w-auto">
+          <span className="text-[24px] leading-[29px] font-bold text-[#002F5B]">{value}</span>
+          <div className="flex flex-col items-start gap-2">
+            <span className="text-[16px] leading-[19px] font-medium text-[#002F5B]">{label}</span>
+            <span className={`text-[14px] leading-[17px] text-start ${hintClass || "text-[#686767]"}`}>{hint}</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-center">{icon}</div>
       </div>
     </div>
   );
 }
+
+
