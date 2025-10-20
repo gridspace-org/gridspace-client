@@ -1,22 +1,17 @@
-const { OAuth2Client } = require('google-auth-library');
-
-// Initialize Google OAuth client
+import { OAuth2Client } from 'google-auth-library';
 const googleClient = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/auth/google/callback'
+  process.env.GOOGLE_REDIRECT_URI
 );
 
-// Verify Google ID token
 const verifyGoogleToken = async (idToken) => {
   try {
     const ticket = await googleClient.verifyIdToken({
       idToken,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
-    
     const payload = ticket.getPayload();
-    
     return {
       googleId: payload.sub,
       email: payload.email,
@@ -29,7 +24,6 @@ const verifyGoogleToken = async (idToken) => {
   }
 };
 
-// Get Google OAuth URL for authorization
 const getGoogleAuthUrl = () => {
   const authUrl = googleClient.generateAuthUrl({
     access_type: 'offline',
@@ -39,21 +33,16 @@ const getGoogleAuthUrl = () => {
     ],
     prompt: 'consent'
   });
-  
   return authUrl;
 };
 
-// Exchange authorization code for tokens
 const getTokensFromCode = async (code) => {
   try {
     const { tokens } = await googleClient.getToken(code);
     googleClient.setCredentials(tokens);
-    
-    // Get user info from Google
     const response = await googleClient.request({
       url: 'https://www.googleapis.com/oauth2/v2/userinfo'
     });
-    
     return {
       googleId: response.data.id,
       email: response.data.email,
@@ -66,7 +55,7 @@ const getTokensFromCode = async (code) => {
   }
 };
 
-module.exports = {
+export {
   googleClient,
   verifyGoogleToken,
   getGoogleAuthUrl,

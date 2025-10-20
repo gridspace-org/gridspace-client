@@ -1,11 +1,15 @@
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
+import jwt from 'jsonwebtoken';
+import User from '../models/User.model.js';
 
-const authenticate = async (req, res, next) => {
+/**
+ * Enhanced authentication middleware with user status checks
+ * O(1) user lookup with indexed _id query
+ */
+export const authenticate = async (req, res, next) => {
   try {
     // Extract token from Authorization header
     const authHeader = req.header("Authorization");
-
+    
     if (!authHeader) {
       return res.status(401).json({
         success: false,
@@ -13,7 +17,6 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    // Check if token starts with "Bearer "
     if (!authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         success: false,
@@ -21,9 +24,8 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    // Extract token (remove "Bearer " prefix)
     const token = authHeader.substring(7);
-
+    
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -31,12 +33,12 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    // Verify token
+    // Verify JWT token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Find user and attach to request
+    
+    // Fetch user with active status check - O(1) indexed lookup
     const user = await User.findById(decoded.id).select("-password");
-
+    
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -44,17 +46,27 @@ const authenticate = async (req, res, next) => {
       });
     }
 
+    // Check if user account is active
+    if (user.isActive === false) {
+      return res.status(403).json({
+        success: false,
+        message: "Account suspended. Please contact support.",
+      });
+    }
+
     // Attach user to request object
     req.user = user;
     next();
+    
   } catch (error) {
+    // Handle specific JWT errors
     if (error.name === "JsonWebTokenError") {
       return res.status(401).json({
         success: false,
         message: "Access denied. Invalid token.",
       });
     }
-
+    
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({
         success: false,
@@ -62,11 +74,38 @@ const authenticate = async (req, res, next) => {
       });
     }
 
+    // Generic server error
     res.status(500).json({
       success: false,
-      message: "Internal server error.",
+      message: "Internal server error during authentication.",
     });
   }
 };
 
-module.exports = { authenticate };
+/**
+ * Optional middleware to require onboarding completion
+ * O(1) check on user.onboardingCompleted field
+ */
+export const requireOnboarding = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Authentication required.",
+    });
+  }
+
+  if (!req.user.onboardingCompleted) {
+    return res.status(403).json({
+      success: false,
+      message: "Please complete onboarding to access this feature.",
+    });
+  }
+
+  next();
+};
+
+/**
+ * Combined middleware for routes requiring full user setup
+ * Chain: authenticate → requireOnboarding
+ */
+export const fullAuth = [authenticate, requireOnboarding];

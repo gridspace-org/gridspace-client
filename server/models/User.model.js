@@ -1,5 +1,5 @@
-const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
+import mongoose from "mongoose";
+import bcrypt from "bcrypt";
 
 const userSchema = new mongoose.Schema({
   fullname: {
@@ -7,10 +7,13 @@ const userSchema = new mongoose.Schema({
     required: [true, "Full name is required"],
     trim: true,
   },
-  phonenumber: {
+  phoneNumber: {
     type: String,
-    required: [true, "Phone number is required"],
+    required: function () {
+      return this.authProvider !== 'google'; // Only required for local users
+    },
     unique: true,
+    sparse: true, // Allows multiple null values for OAuth users
     trim: true,
   },
   email: {
@@ -22,7 +25,7 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: function() {
+    required: function () {
       return !this.googleId; // Password is required only if not using Google OAuth
     },
     minlength: [6, "Password must be at least 6 characters long"],
@@ -34,8 +37,8 @@ const userSchema = new mongoose.Schema({
   },
   authProvider: {
     type: String,
-    enum: ['local', 'google'],
-    default: 'local',
+    enum: ["local", "google"],
+    default: "local",
   },
   role: {
     type: String,
@@ -54,9 +57,16 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  purposes: [{
-    type: String,
-  }],
+  purposes: [
+    {
+      type: String,
+    },
+  ],
+  // Add to User.model.js schema:
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
   location: {
     type: String,
     trim: true,
@@ -96,4 +106,4 @@ userSchema.methods.toJSON = function () {
   return userObject;
 };
 
-module.exports = mongoose.model("User", userSchema);
+export default mongoose.model("User", userSchema);

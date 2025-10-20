@@ -1,4 +1,5 @@
-const cloudinary = require("cloudinary").v2;
+import { v2 as cloudinary } from 'cloudinary';
+import logger from './logger.js';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -6,5 +7,9 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-module.exports = cloudinary;
+// Test configuration
+cloudinary.api.ping()
+  .then(() => logger.info('Cloudinary configuration successful'))
+  .catch((error) => logger.error('Cloudinary configuration failed:', error));
 
+export default cloudinary;

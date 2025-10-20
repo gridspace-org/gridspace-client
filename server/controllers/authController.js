@@ -10,9 +10,19 @@ const emailService = require("../services/emailService");
 
 // Helper function to generate JWT token
 const generateToken = (userId) => {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES || "7d",
-  });
+  return jwt.sign(
+    {
+      id: userId,
+      iat: Date.now() / 1000, // Issued at time
+      type: 'access' // Token type for future refresh token logic
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES || '24h',
+      issuer: 'gridspace-backend',
+      audience: 'gridspace-client'
+    }
+  );
 };
 
 // Helper function to upload to Cloudinary
@@ -20,7 +30,7 @@ const uploadToCloudinary = async (file) => {
   return new Promise((resolve, reject) => {
     // Check if Cloudinary is configured
     if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-      console.error("Cloudinary configuration missing:", {
+      logger.error("Cloudinary configuration missing:", {
         cloud_name: !!process.env.CLOUDINARY_CLOUD_NAME,
         api_key: !!process.env.CLOUDINARY_API_KEY,
         api_secret: !!process.env.CLOUDINARY_API_SECRET
@@ -39,30 +49,30 @@ const uploadToCloudinary = async (file) => {
       },
       (error, result) => {
         if (error) {
-          console.error("Cloudinary upload error:", error);
+          logger.error("Cloudinary upload error:", error);
           reject(error);
         } else {
-          console.log("Cloudinary upload successful:", result.secure_url);
+          logger.info("Cloudinary upload successful:", result.secure_url);
           resolve(result.secure_url);
         }
       }
     );
 
-    require("streamifier").createReadStream(file.buffer).pipe(uploadStream);
+    streamifier.createReadStream(file.buffer).pipe(uploadStream);
   });
 };
 
 // Signup controller
-const signup = async (req, res) => {
+export const signup = async (req, res) => {
   try {
-    const { fullname, email, password, phonenumber } = req.body;
+    const { fullname, email, password, phoneNumber } = req.body;
 
     // Validate required fields
-    if (!fullname || !email || !password || !phonenumber) {
+    if (!fullname || !email || !password || !phoneNumber) {
       return res.status(400).json({
         success: false,
         message:
-          "Please provide all required fields: fullname, email, password, phonenumber",
+          "Please provide all required fields: fullname, email, password, phoneNumber",
       });
     }
 
@@ -93,7 +103,7 @@ const signup = async (req, res) => {
     }
 
     // Check if phone number already exists
-    const existingPhone = await User.findOne({ phonenumber });
+    const existingPhone = await User.findOne({ phoneNumber });
     if (existingPhone) {
       return res.status(400).json({
         success: false,
@@ -120,7 +130,7 @@ const signup = async (req, res) => {
       fullname: fullname.trim(),
       email: email.toLowerCase().trim(),
       password,
-      phonenumber: phonenumber.trim(),
+      phoneNumber: phoneNumber.trim(),
       profilePic: profilePicUrl,
     });
 
@@ -146,7 +156,7 @@ const signup = async (req, res) => {
 };
 
 // Signin controller
-const signin = async (req, res) => {
+export const signin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -196,7 +206,7 @@ const signin = async (req, res) => {
 };
 
 // Get current user profile
-const getProfile = async (req, res) => {
+export const getProfile = async (req, res) => {
   try {
     const user = req.user;
     res.status(200).json({
@@ -214,13 +224,13 @@ const getProfile = async (req, res) => {
 };
 
 // Update user profile
-const updateProfile = async (req, res) => {
+export const updateProfile = async (req, res) => {
   try {
-    const { fullname, phonenumber } = req.body;
+    const { fullname, phoneNumber } = req.body;
     const userId = req.user._id;
 
     // Validate required fields
-    if (!fullname && !phonenumber) {
+    if (!fullname && !phoneNumber) {
       return res.status(400).json({
         success: false,
         message: "Please provide at least one field to update",
@@ -228,9 +238,9 @@ const updateProfile = async (req, res) => {
     }
 
     // Check if phone number is being updated and if it already exists
-    if (phonenumber && phonenumber !== req.user.phonenumber) {
+    if (phoneNumber && phoneNumber !== req.user.phoneNumber) {
       const existingPhone = await User.findOne({
-        phonenumber,
+        phoneNumber,
         _id: { $ne: userId },
       });
       if (existingPhone) {
@@ -244,7 +254,7 @@ const updateProfile = async (req, res) => {
     // Prepare update object
     const updateData = {};
     if (fullname) updateData.fullname = fullname.trim();
-    if (phonenumber) updateData.phonenumber = phonenumber.trim();
+    if (phoneNumber) updateData.phoneNumber = phoneNumber.trim();
 
     // Update profile picture if file exists
     if (req.file) {
@@ -280,7 +290,7 @@ const updateProfile = async (req, res) => {
 };
 
 // Change password
-const changePassword = async (req, res) => {
+export const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user._id;
@@ -337,7 +347,7 @@ const changePassword = async (req, res) => {
 };
 
 // Request password reset
-const requestPasswordReset = async (req, res) => {
+export const requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -404,7 +414,7 @@ const requestPasswordReset = async (req, res) => {
 };
 
 // Reset password
-const resetPassword = async (req, res) => {
+export const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
@@ -508,7 +518,7 @@ const verifyPasswordResetOtp = async (req, res) => {
 };
 
 // Request email verification
-const requestEmailVerification = async (req, res) => {
+export const requestEmailVerification = async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -608,7 +618,7 @@ const requestEmailVerification = async (req, res) => {
 };
 
 // Verify email
-const verifyEmail = async (req, res) => {
+export const verifyEmail = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
@@ -780,7 +790,7 @@ const resendEmailVerification = async (req, res) => {
 };
 
 // Logout (client-side token removal)
-const logout = async (req, res) => {
+export const logout = async (req, res) => {
   try {
     // In a stateless JWT system, logout is handled client-side
     // You could implement a token blacklist here if needed
@@ -798,7 +808,7 @@ const logout = async (req, res) => {
 };
 
 // Refresh token
-const refreshToken = async (req, res) => {
+export const refreshToken = async (req, res) => {
   try {
     const user = req.user;
 
@@ -821,7 +831,7 @@ const refreshToken = async (req, res) => {
 };
 
 // Complete onboarding
-const completeOnboarding = async (req, res) => {
+export const completeOnboarding = async (req, res) => {
   try {
     const { role, purposes, location } = req.body;
     const userId = req.user._id;
@@ -873,12 +883,12 @@ const completeOnboarding = async (req, res) => {
     // Update profile picture if file exists
     if (req.file) {
       try {
-        console.log("Uploading profile picture for onboarding...");
+        logger.info("Uploading profile picture for onboarding...");
         const profilePicUrl = await uploadToCloudinary(req.file);
         updateData.profilePic = profilePicUrl;
-        console.log("Profile picture uploaded successfully:", profilePicUrl);
+        logger.info("Profile picture uploaded successfully:", profilePicUrl);
       } catch (error) {
-        console.error("Profile picture upload failed:", error);
+        logger.error("Profile picture upload failed:", error);
         return res.status(500).json({
           success: false,
           message: `Failed to upload profile picture: ${error.message}`,
@@ -907,7 +917,7 @@ const completeOnboarding = async (req, res) => {
 };
 
 // Delete account
-const deleteAccount = async (req, res) => {
+export const deleteAccount = async (req, res) => {
   try {
     const userId = req.user._id;
     const { password } = req.body;
@@ -955,7 +965,7 @@ const deleteAccount = async (req, res) => {
 };
 
 // Google OAuth Signup/Signin with ID Token
-const googleAuth = async (req, res) => {
+export const googleAuth = async (req, res) => {
   try {
     const { idToken } = req.body;
 
@@ -990,7 +1000,7 @@ const googleAuth = async (req, res) => {
         await user.save();
       }
     } else {
-      // Create new user
+      // Create new user - phone number optional for Google OAuth
       user = new User({
         fullname: googleUser.fullname,
         email: googleUser.email,
@@ -998,7 +1008,7 @@ const googleAuth = async (req, res) => {
         authProvider: 'google',
         emailVerified: googleUser.emailVerified,
         profilePic: googleUser.profilePic,
-        phonenumber: `+${Math.floor(Math.random() * 9000000000) + 1000000000}`, // Generate random phone for Google users
+        phoneNumber: googleUser.phoneNumber || null, // Use Google phone if available, else null
       });
 
       await user.save();
@@ -1024,7 +1034,7 @@ const googleAuth = async (req, res) => {
 };
 
 // Get Google OAuth URL
-const getGoogleAuthUrlController = async (req, res) => {
+export const getGoogleAuthUrlController = async (req, res) => {
   try {
     const authUrl = getGoogleAuthUrl();
     
@@ -1043,7 +1053,7 @@ const getGoogleAuthUrlController = async (req, res) => {
 };
 
 // Google OAuth Callback (for server-side flow)
-const googleCallback = async (req, res) => {
+export const googleCallback = async (req, res) => {
   try {
     const { code } = req.query;
 
@@ -1077,7 +1087,7 @@ const googleCallback = async (req, res) => {
         await user.save();
       }
     } else {
-      // Create new user
+      // Create new user - phone number optional for Google OAuth
       user = new User({
         fullname: googleUser.fullname,
         email: googleUser.email,
@@ -1085,7 +1095,7 @@ const googleCallback = async (req, res) => {
         authProvider: 'google',
         emailVerified: googleUser.emailVerified,
         profilePic: googleUser.profilePic,
-        phonenumber: `+${Math.floor(Math.random() * 9000000000) + 1000000000}`, // Generate random phone for Google users
+        phoneNumber: googleUser.phoneNumber || null, // Use Google phone if available, else null
       });
 
       await user.save();
@@ -1095,10 +1105,10 @@ const googleCallback = async (req, res) => {
     const token = generateToken(user._id);
 
     // Redirect to frontend with token
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL;
     res.redirect(`${frontendUrl}/auth/callback?token=${token}&success=true`);
   } catch (error) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL;
     res.redirect(`${frontendUrl}/auth/callback?success=false&error=${encodeURIComponent(error.message)}`);
   }
 };

@@ -1,21 +1,22 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const emailVerificationSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    required: true,
-    lowercase: true,
-    trim: true,
+  email: { 
+    type: String, 
+    required: true, 
+    lowercase: true, 
+    trim: true 
   },
   otp: {
     type: String,
     required: true,
+    unique: true,
   },
-  expiresAt: {
-    type: Date,
-    required: true,
-    default: Date.now,
-    expires: 600, // 10 minutes (600 seconds)
+  expiresAt: { 
+    type: Date, 
+    required: true, 
+    default: Date.now, 
+    expires: 86400 
   },
   verified: {
     type: Boolean,
@@ -36,4 +37,4 @@ const emailVerificationSchema = new mongoose.Schema({
 emailVerificationSchema.index({ email: 1, otp: 1 });
 emailVerificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-module.exports = mongoose.model("EmailVerification", emailVerificationSchema);
+export default mongoose.model("EmailVerification", emailVerificationSchema);
