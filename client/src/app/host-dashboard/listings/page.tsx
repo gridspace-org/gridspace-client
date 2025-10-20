@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Plus, Eye, Edit, Calendar, ChevronDown, Star } from "lucide-react";
 import AddListingModal from "../components/AddListingModal";
+import EmptyState from "../components/EmptyState";
+import LoadingSpinner from "../components/LoadingSpinner";
+import { spacesApi, Space } from "@/services/spacesApi";
 
 type Listing = {
   id: string;
@@ -109,11 +112,46 @@ const mockBookings: BookingRow[] = [
 
 export default function ListingsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const totalListings = mockListings.length;
-  const approvedListings = mockListings.filter(l => l.status === "Completed").length;
-  const pendingListings = mockListings.filter(l => l.status === "Pending").length;
-  const totalBookings = mockListings.reduce((sum, l) => sum + l.totalBookings, 0);
+  // Fetch spaces on component mount
+  useEffect(() => {
+    const fetchSpaces = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await spacesApi.getMySpaces();
+        setSpaces(response.data.spaces);
+      } catch (err) {
+        console.error('Error fetching spaces:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch spaces');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSpaces();
+  }, []);
+
+  // Transform spaces to listing format for display
+  const listings = spaces.map((space) => ({
+    id: space._id,
+    name: space.title,
+    location: space.location,
+    status: space.isActive ? "Completed" : "Pending",
+    dailyRate: `₦${space.pricePerHour.toLocaleString()}/day`,
+    ratingText: "4.5 (120 reviews)", // This would come from reviews API
+    type: space.purposes[0] || "Shared Desk",
+    capacity: `${space.capacity} People`,
+    totalBookings: 10, // This would come from bookings API
+  }));
+
+  const totalListings = listings.length;
+  const approvedListings = listings.filter(l => l.status === "Completed").length;
+  const pendingListings = listings.filter(l => l.status === "Pending").length;
+  const totalBookings = listings.reduce((sum, l) => sum + l.totalBookings, 0);
 
   return (
     <>
@@ -170,8 +208,29 @@ export default function ListingsPage() {
             </div>
             <div className="h-px w-full bg-[#D1D5DB]" />
 
-            <div className="flex flex-col divide-y divide-[#D1D5DB]">
-              {mockListings.map((l) => (
+            {loading ? (
+              <LoadingSpinner text="Loading your listings..." />
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <p className="text-red-600 mb-4">Error: {error}</p>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-[#F25417] text-white rounded-lg hover:bg-[#E0440F] transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : listings.length === 0 ? (
+              <EmptyState
+                type="listings"
+                title="No listings yet"
+                description="Start by creating your first workspace listing to begin earning from your space."
+                actionText="Add Your First Listing"
+                onActionClick={() => setIsModalOpen(true)}
+              />
+            ) : (
+              <div className="flex flex-col divide-y divide-[#D1D5DB]">
+                {listings.map((l) => (
                 <div key={l.id} className="py-3 flex flex-col gap-4">
                   {/* Row top: name/location + status + price/rating */}
                   <div className="flex items-center justify-between gap-6">
@@ -233,8 +292,9 @@ export default function ListingsPage() {
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Bookings Panel */}

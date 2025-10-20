@@ -16,12 +16,18 @@ import {
 import { useAppSelector } from "@/store/hooks";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AddListingModal from "./components/AddListingModal";
+import EmptyState from "./components/EmptyState";
+import LoadingSpinner from "./components/LoadingSpinner";
+import { spacesApi, Space } from "@/services/spacesApi";
 
 export default function HostDashboardPage() {
   const { user } = useAppSelector((state) => state.auth);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const userInfo = {
     name: user?.fullname || "Host",
@@ -30,39 +36,40 @@ export default function HostDashboardPage() {
     avatar: user?.profilePic || "/avatar-placeholder.png",
   };
 
-  // Mock data for listings
-  const listings = [
-    {
-      id: 1,
-      name: "Urban Coworking Hub",
-      location: "Victoria Island, Lagos",
-      price: "₦10,000",
-      status: "Completed",
-      statusColor: "bg-green-100 text-green-800",
-      createdDate: "Created June 22nd, 2025",
-      image: "/space1.png",
-    },
-    {
-      id: 2,
-      name: "Urban Coworking Hub",
-      location: "Victoria Island, Lagos",
-      price: "₦10,000",
-      status: "Pending",
-      statusColor: "bg-yellow-100 text-yellow-800",
-      createdDate: "Created June 22nd, 2025",
-      image: "/space1.png",
-    },
-    {
-      id: 3,
-      name: "Urban Coworking Hub",
-      location: "Victoria Island, Lagos",
-      price: "₦10,000",
-      status: "Canceled",
-      statusColor: "bg-red-100 text-red-800",
-      createdDate: "Created June 22nd, 2025",
-      image: "/space1.png",
-    },
-  ];
+  // Fetch spaces on component mount
+  useEffect(() => {
+    const fetchSpaces = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await spacesApi.getMySpaces({ limit: 3 });
+        setSpaces(response.data.spaces);
+      } catch (err) {
+        console.error('Error fetching spaces:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch spaces');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSpaces();
+  }, []);
+
+  // Transform spaces to listing format for display
+  const listings = spaces.map((space) => ({
+    id: space._id,
+    name: space.title,
+    location: space.location,
+    price: `₦${space.pricePerHour.toLocaleString()}`,
+    status: space.isActive ? "Completed" : "Pending",
+    statusColor: space.isActive ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800",
+    createdDate: `Created ${new Date(space.createdAt).toLocaleDateString('en-US', { 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    })}`,
+    image: space.images[0] || "/space1.png",
+  }));
 
   // Mock data for earnings
   const earnings = [
@@ -204,8 +211,29 @@ export default function HostDashboardPage() {
               </div>
 
               <div className="border-t border-[#D1D5DB] pt-4">
-                <div className="space-y-0">
-                  {listings.map((listing) => (
+                {loading ? (
+                  <LoadingSpinner text="Loading your listings..." />
+                ) : error ? (
+                  <div className="flex flex-col items-center justify-center py-8">
+                    <p className="text-red-600 mb-4">Error: {error}</p>
+                    <button 
+                      onClick={() => window.location.reload()}
+                      className="px-4 py-2 bg-[#F25417] text-white rounded-lg hover:bg-[#E0440F] transition-colors"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                ) : listings.length === 0 ? (
+                  <EmptyState
+                    type="listings"
+                    title="No listings yet"
+                    description="Start by creating your first workspace listing to begin earning from your space."
+                    actionText="Add Your First Listing"
+                    onActionClick={() => setIsModalOpen(true)}
+                  />
+                ) : (
+                  <div className="space-y-0">
+                    {listings.map((listing) => (
                     <div
                       key={listing.id}
                       className="flex flex-col justify-center items-start py-3 pb-6 gap-6 w-full border-b border-[#D1D5DB] last:border-b-0 lg:h-[256px]"
@@ -289,8 +317,9 @@ export default function HostDashboardPage() {
                         </button>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

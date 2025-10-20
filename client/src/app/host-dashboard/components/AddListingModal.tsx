@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { X, Clock, ChevronDown, Wifi, Zap, Bath, Thermometer, Wind, Lightbulb, Monitor, Keyboard, Printer, Phone, Building, Coffee, Music, Car, Shield, Brush, Mail, User, Upload, Trash2, Info } from "lucide-react";
+import { spacesApi, CreateSpaceRequest } from "@/services/spacesApi";
 
 interface AddListingModalProps {
   isOpen: boolean;
@@ -42,6 +43,8 @@ interface Amenity {
 
 export default function AddListingModal({ isOpen, onClose }: AddListingModalProps) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     spaceName: "",
     spaceType: "",
@@ -361,16 +364,29 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
     } else if (currentStep === 6) {
       // Final submission
       setIsSubmitting(true);
+      setSubmitError(null);
       
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        console.log("Form submitted:", formData);
+        // Prepare data for API
+        const spaceData: CreateSpaceRequest = {
+          title: formData.spaceName,
+          description: formData.description,
+          location: formData.location,
+          address: formData.fullAddress,
+          pricePerHour: parseInt(formData.hourlyRate),
+          capacity: parseInt(formData.capacity),
+          purposes: [formData.spaceType],
+          amenities: selectedAmenities.map(id => amenities.find(a => a.id === id)?.name || '').filter(Boolean),
+        };
+
+        // Submit to API
+        await spacesApi.createSpace(spaceData);
         
         // Close modal on success
         onClose();
       } catch (error) {
         console.error("Error submitting form:", error);
+        setSubmitError(error instanceof Error ? error.message : 'Failed to create listing');
       } finally {
         setIsSubmitting(false);
       }
@@ -1097,6 +1113,23 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
                   </div>
                 </div>
               </div>
+
+              {/* Error Display */}
+              {submitError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5">⚠️</div>
+                    <div>
+                      <h3 className="text-lg font-medium text-red-800">
+                        Submission Failed
+                      </h3>
+                      <p className="text-red-700 text-sm mt-1">
+                        {submitError}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Listing Preview */}
               <div className="space-y-4">
