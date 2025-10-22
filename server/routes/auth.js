@@ -56,10 +56,11 @@ const gentleAuthLimiter = rateLimit({
 router.post("/signup", moderateAuthLimiter, upload.single("profilePic"), signup);
 router.post("/signin", strictAuthLimiter, signin);
 router.post("/request-password-reset", moderateAuthLimiter, requestPasswordReset);
-router.post("/reset-password", gentleAuthLimiter, resetPassword);
+router.post("/reset-password", resetPassword);
 router.post("/request-email-verification", gentleAuthLimiter, requestEmailVerification);
 router.post("/verify-email", verifyEmail);
 router.post("/resend-email-verification", resendEmailVerification);
+router.post("/verify-password-reset-otp", gentleAuthLimiter, verifyPasswordResetOtp);
 
 // Google OAuth routes
 router.post("/google", googleAuth);

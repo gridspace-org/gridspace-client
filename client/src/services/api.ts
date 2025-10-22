@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosResponse, isAxiosError } from 'axios';
 
 interface SignupData {
   fullname: string;
@@ -101,16 +101,26 @@ class ApiService {
   }
 
   // Helper method to handle errors
-  private handleError(error: any): never {
+  private handleError(error: unknown): never {
     console.error("API Error in handleError:", error);
-    
-    // Extract server error message from response data
-    const serverMessage = error.response?.data?.message || error.response?.data?.error;
-    const errorMessage = serverMessage || error.message || "Server error occurred";
-    
-    console.log("Extracted server message:", serverMessage);
+
+    let errorMessage = "Server error occurred";
+
+    if (isAxiosError(error)) {
+      const data: unknown = error.response?.data;
+      const maybeRecord = (val: unknown): val is Record<string, unknown> =>
+        typeof val === 'object' && val !== null;
+      const serverMessage = maybeRecord(data)
+        ? (typeof data.message === 'string' ? data.message : undefined) ||
+          (typeof (data as Record<string, unknown>).error === 'string' ? (data as Record<string, unknown>).error as string : undefined)
+        : undefined;
+      errorMessage = serverMessage || error.message || errorMessage;
+      console.log("Extracted server message:", serverMessage);
+    } else if (error instanceof Error) {
+      errorMessage = error.message || errorMessage;
+    }
+
     console.log("Final error message:", errorMessage);
-    
     throw new Error(errorMessage);
   }
 

@@ -11,20 +11,24 @@ import {
   Edit,
   Pause,
   ChevronDown,
-  Send,
 } from "lucide-react";
 import { useAppSelector } from "@/store/hooks";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import AddListingModal from "./components/AddListingModal";
+import ViewEditListingModal from "./components/ViewEditListingModal";
 import EmptyState from "./components/EmptyState";
 import LoadingSpinner from "./components/LoadingSpinner";
 import { spacesApi, Space } from "@/services/spacesApi";
 
 export default function HostDashboardPage() {
   const { user } = useAppSelector((state) => state.auth);
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewEditModalOpen, setIsViewEditModalOpen] = useState(false);
+  const [selectedListingId, setSelectedListingId] = useState<string>("");
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,33 +75,6 @@ export default function HostDashboardPage() {
     image: space.images[0] || "/space1.png",
   }));
 
-  // Mock data for earnings
-  const earnings = [
-    {
-      id: 1,
-      title: "Payment for Urban Hub",
-      date: "Tue, Jul 1 2025",
-      amount: "₦5,000",
-      status: "Completed",
-      type: "payment",
-    },
-    {
-      id: 2,
-      title: "Interest",
-      date: "Tue, Jul 1 2025",
-      amount: "₦1,000",
-      status: "Completed",
-      type: "interest",
-    },
-    {
-      id: 3,
-      title: "Interest",
-      date: "Tue, Jul 1 2025",
-      amount: "₦1,000",
-      status: "Completed",
-      type: "interest",
-    },
-  ];
 
   return (
     <>
@@ -106,7 +83,10 @@ export default function HostDashboardPage() {
           {/* Welcome Section */}
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 lg:gap-0 mb-6">
             <div className="flex items-center gap-2 sm:gap-6">
-              <button className="flex items-center justify-center w-6 h-6">
+              <button 
+                onClick={() => router.back()}
+                className="flex items-center justify-center w-6 h-6 hover:bg-gray-100 rounded-lg transition-colors"
+              >
                 <ArrowLeft className="w-6 h-6 text-[#121212]" />
               </button>
               <div className="flex flex-col gap-1">
@@ -147,7 +127,7 @@ export default function HostDashboardPage() {
               </div>
             </Link>
 
-            <Link href="/host-dashboard/calendar" className="bg-white border border-[#D1D5DB] rounded-xl p-4 shadow-sm lg:p-6 cursor-pointer block">
+            <Link href="/host-dashboard/calendar" className="bg-white border border-[#D1D5DB] rounded-xl p-4 shadow-sm lg:p-6 opacity-50 cursor-not-allowed pointer-events-none" aria-disabled="true">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center lg:w-10 lg:h-10">
                   <Calendar className="w-8 h-8 text-[#002F5B] lg:w-10 lg:h-10" />
@@ -163,7 +143,7 @@ export default function HostDashboardPage() {
               </div>
             </Link>
 
-            <Link href="/host-dashboard/earnings" className="bg-white border border-[#D1D5DB] rounded-xl p-4 shadow-sm lg:p-6 cursor-pointer block">
+            <Link href="/host-dashboard/earnings" className="bg-white border border-[#D1D5DB] rounded-xl p-4 shadow-sm lg:p-6 opacity-50 cursor-not-allowed pointer-events-none" aria-disabled="true">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center lg:w-10 lg:h-10">
                   <DollarSign className="w-8 h-8 text-[#002F5B] lg:w-10 lg:h-10" />
@@ -293,7 +273,13 @@ export default function HostDashboardPage() {
                       {/* Action buttons row */}
                       <div className="flex flex-row items-center gap-2 w-full lg:gap-[7px] lg:w-[294px] lg:h-[44px]">
                         {/* View button */}
-                        <button className="flex flex-row justify-center items-center px-3 py-2 gap-2 bg-[#DCFCE7] rounded-lg flex-1 lg:px-[10px] lg:py-[13px] lg:gap-[10px] lg:w-[93px] lg:h-[44px] lg:flex-none">
+                        <button 
+                          onClick={() => {
+                            setSelectedListingId(listing.id);
+                            setIsViewEditModalOpen(true);
+                          }}
+                          className="flex flex-row justify-center items-center px-3 py-2 gap-2 bg-[#DCFCE7] rounded-lg flex-1 lg:px-[10px] lg:py-[13px] lg:gap-[10px] lg:w-[93px] lg:h-[44px] lg:flex-none hover:bg-[#BBF7D0] transition-colors"
+                        >
                           <Eye className="w-4 h-4 text-[#166534] lg:w-6 lg:h-6" />
                           <span className="text-sm font-semibold text-[#166534] lg:text-[16px] lg:leading-[19px]">
                             View
@@ -301,7 +287,13 @@ export default function HostDashboardPage() {
                         </button>
 
                         {/* Edit button */}
-                        <button className="flex flex-row justify-center items-center px-3 py-2 gap-2 bg-[#EDF6FF] rounded-lg flex-1 lg:px-[10px] lg:py-[13px] lg:gap-[10px] lg:w-[85px] lg:h-[44px] lg:flex-none">
+                        <button 
+                          onClick={() => {
+                            setSelectedListingId(listing.id);
+                            setIsViewEditModalOpen(true);
+                          }}
+                          className="flex flex-row justify-center items-center px-3 py-2 gap-2 bg-[#EDF6FF] rounded-lg flex-1 lg:px-[10px] lg:py-[13px] lg:gap-[10px] lg:w-[85px] lg:h-[44px] lg:flex-none hover:bg-[#DBEAFE] transition-colors"
+                        >
                           <Edit className="w-4 h-4 text-[#002F5B] lg:w-6 lg:h-6" />
                           <span className="text-sm font-semibold text-[#002F5B] lg:text-[16px] lg:leading-[19px]">
                             Edit
@@ -329,7 +321,7 @@ export default function HostDashboardPage() {
                 Recent Earnings
               </h2>
 
-              <div className="space-y-4">
+              {/* <div className="space-y-4">
                 {earnings.map((earning) => (
                   <div
                     key={earning.id}
@@ -364,7 +356,7 @@ export default function HostDashboardPage() {
                     </div>
                   </div>
                 ))}
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
@@ -374,6 +366,18 @@ export default function HostDashboardPage() {
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
         />
+
+        {/* View/Edit Listing Modal */}
+        {selectedListingId && (
+          <ViewEditListingModal 
+            isOpen={isViewEditModalOpen} 
+            onClose={() => {
+              setIsViewEditModalOpen(false);
+              setSelectedListingId("");
+            }}
+            spaceId={selectedListingId}
+          />
+        )}
     </>
   );
 }

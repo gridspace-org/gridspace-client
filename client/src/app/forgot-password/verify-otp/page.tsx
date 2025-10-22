@@ -79,7 +79,7 @@ export default function VerifyOTPPage() {
               Enter the verification code sent to your email address
             </p>
             <p className="text-[14px] leading-[18px] max-md:text-[12px] max-md:leading-[16px] max-sm:text-[10px] max-sm:leading-[14px] text-[#9CA3AF] text-center max-w-[518px] max-md:max-w-[90%] max-sm:max-w-[95%]">
-              Can't find the email? Please check your spam folder
+              Can&apos;t find the email? Please check your spam folder
             </p>
           </div>
 

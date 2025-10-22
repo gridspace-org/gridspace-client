@@ -1,4 +1,3 @@
-import { useAppSelector } from "@/store/hooks";
 
 export interface Space {
   _id: string;
@@ -61,6 +60,7 @@ export interface CreateSpaceRequest {
   capacity: number;
   purposes: string[];
   amenities: string[];
+  images?: string[]; // Optional for initial creation, can be added later
 }
 
 export interface UpdateSpaceRequest {
@@ -72,6 +72,8 @@ export interface UpdateSpaceRequest {
   capacity?: number;
   purposes?: string[];
   amenities?: string[];
+  images?: string[];
+  isActive?: boolean;
 }
 
 class SpacesApiService {
@@ -91,11 +93,13 @@ class SpacesApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const token = await this.getAuthToken();
-    
+    // If body is FormData, do not set Content-Type (browser will set the multipart boundary)
+    const isFormData = options.body instanceof FormData;
+
     const config: RequestInit = {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
@@ -136,14 +140,14 @@ class SpacesApiService {
     if (params.sortBy) searchParams.append('sortBy', params.sortBy);
 
     const queryString = searchParams.toString();
-    const endpoint = `/api/spaces${queryString ? `?${queryString}` : ''}`;
+    const endpoint = `/spaces${queryString ? `?${queryString}` : ''}`;
     
     return this.makeRequest<SpacesResponse>(endpoint);
   }
 
   // Get space details
   async getSpaceById(id: string): Promise<{ success: boolean; message: string; data: Space }> {
-    return this.makeRequest<{ success: boolean; message: string; data: Space }>(`/api/spaces/${id}`);
+    return this.makeRequest<{ success: boolean; message: string; data: Space }>(`/spaces/${id}`);
   }
 
   // Get my spaces (host only)
@@ -153,14 +157,25 @@ class SpacesApiService {
     if (params.limit) searchParams.append('limit', params.limit.toString());
 
     const queryString = searchParams.toString();
-    const endpoint = `/api/spaces/my/spaces${queryString ? `?${queryString}` : ''}`;
+    const endpoint = `/spaces/my/spaces${queryString ? `?${queryString}` : ''}`;
     
     return this.makeRequest<MySpacesResponse>(endpoint);
   }
 
   // Create space (host only)
-  async createSpace(spaceData: CreateSpaceRequest): Promise<{ success: boolean; message: string; data: Space }> {
-    return this.makeRequest<{ success: boolean; message: string; data: Space }>('/api/spaces', {
+  async createSpace(
+    spaceData: CreateSpaceRequest | FormData
+  ): Promise<{ success: boolean; message: string; data: Space }> {
+    // If the caller passed a FormData (contains files), forward it directly so multer on the server
+    // receives files under the 'images' field (append files to key 'images')
+    if (spaceData instanceof FormData) {
+      return this.makeRequest<{ success: boolean; message: string; data: Space }>('/spaces', {
+        method: 'POST',
+        body: spaceData,
+      });
+    }
+
+    return this.makeRequest<{ success: boolean; message: string; data: Space }>('/spaces', {
       method: 'POST',
       body: JSON.stringify(spaceData),
     });
@@ -168,7 +183,7 @@ class SpacesApiService {
 
   // Update space (host only)
   async updateSpace(id: string, spaceData: UpdateSpaceRequest): Promise<{ success: boolean; message: string; data: Space }> {
-    return this.makeRequest<{ success: boolean; message: string; data: Space }>(`/api/spaces/${id}`, {
+    return this.makeRequest<{ success: boolean; message: string; data: Space }>(`/spaces/${id}`, {
       method: 'PUT',
       body: JSON.stringify(spaceData),
     });
@@ -176,7 +191,7 @@ class SpacesApiService {
 
   // Delete space (host only)
   async deleteSpace(id: string): Promise<{ success: boolean; message: string }> {
-    return this.makeRequest<{ success: boolean; message: string }>(`/api/spaces/${id}`, {
+    return this.makeRequest<{ success: boolean; message: string }>(`/spaces/${id}`, {
       method: 'DELETE',
     });
   }

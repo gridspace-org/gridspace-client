@@ -1,8 +1,24 @@
+"use client";
+
 import { ArrowRight, Users, MapPin, Medal, Calendar } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function HeroSection() {
+  const [location, setLocation] = useState("");
+  const [date, setDate] = useState("");
+  const router = useRouter();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const searchParams = new URLSearchParams();
+    if (location) searchParams.set("location", location);
+    if (date) searchParams.set("date", date);
+    router.push(`/search?${searchParams.toString()}`);
+  };
+
   return (
     <section className="flex flex-col md:flex-row items-center justify-center px-4 md:px-8 py-5 gap-8 max-w-[1440px] mx-auto">
       <div className="w-full md:w-1/2">
@@ -37,8 +53,8 @@ export default function HeroSection() {
           </Link>
         </div>
 
-        {/* Search Bar */}
-        <div className="bg-white xl:mb-[103px] p-4 rounded-lg shadow-sm mb-8 w-full">
+          {/* Search Bar */}
+        <form onSubmit={handleSearch} className="bg-white xl:mb-[103px] p-4 rounded-lg shadow-sm mb-8 w-full">
           <div className="flex flex-col [@media(min-width:1440px)]:flex-row items-stretch md:items-center gap-3 md:gap-4 w-full">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 md:gap-2 w-full">
               <div className="flex items-center gap-2 px-3 py-2 border border-[var(--color-secondary)] rounded-lg w-full sm:w-1/2">
@@ -47,6 +63,8 @@ export default function HeroSection() {
                   type="text"
                   placeholder="Enter location or city"
                   className="w-full text-sm text-gray-500 outline-none"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
                 />
               </div>
               <div className="flex items-center gap-2 px-3 py-2 border border-[var(--color-secondary)] rounded-lg w-full sm:w-1/2">
@@ -55,17 +73,21 @@ export default function HeroSection() {
                   type="date"
                   placeholder="dd/mm/yy"
                   className="w-full text-sm text-gray-500 outline-none"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
                 />
               </div>
             </div>
-            <button className="flex items-center justify-center gap-2 px-4 py-3 bg-[var(--color-primary)] text-[var(--color-text-light)] text-[14px] md:text-[16px] font-bold rounded-lg hover:bg-[var(--color-primary-hover)] w-full [@media(min-width:1440px)]:w-fit whitespace-nowrap">
+            <button 
+              type="submit"
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-[var(--color-primary)] text-[var(--color-text-light)] text-[14px] md:text-[16px] font-bold rounded-lg hover:bg-[var(--color-primary-hover)] w-full [@media(min-width:1440px)]:w-fit whitespace-nowrap"
+            >
               Find a Space
               <ArrowRight className="w-6 h-6" />
             </button>
           </div>
-        </div>
-
-        {/* Statistics */}
+        </form>        {/* Statistics */}
         <div className="grid grid-cols-3 gap-6 md:gap-8">
           <div className="flex items-center gap-3">
             <div className="w-[70px] h-[70px] max-xl:size-12 max-xl:min-w-[48px] max-sm:size-10 max-sm:min-w-[40px] [@media(max-width:420px)]:size-8 [@media(max-width:420px)]:min-w-[32px] bg-[var(--color-primary-light)] rounded-full flex items-center justify-center">

@@ -56,16 +56,16 @@ export default function AdminNav({ userName, adminSince, profilePic }: AdminNavP
                 <span className="text-[12px] text-[#A8A7A7]">search...</span>
               </div>
               <Filter className="w-6 h-6 text-[#A8A7A7]" />
-            </div>
           </div>
+        </div>
 
           {/* Right Section */}
           <div className="flex items-center gap-2 md:gap-3 relative" ref={menuRef}>
             <div className="w-8 h-8 md:w-[49px] md:h-[49px] bg-[#E7E7E7] rounded-full flex items-center justify-center">
               <Bell className="w-4 h-4 md:w-7 md:h-7 text-[#121212]" />
-            </div>
+          </div>
             <div className="flex items-center gap-2 md:gap-[8px]">
-              <button
+          <button
                 type="button"
                 aria-haspopup="menu"
                 aria-expanded={isMenuOpen}
@@ -80,7 +80,7 @@ export default function AdminNav({ userName, adminSince, profilePic }: AdminNavP
                     <span className="text-gray-500 text-sm font-medium">{userName.charAt(0).toUpperCase()}</span>
                   </div>
                 )}
-              </button>
+          </button>
               <div className="hidden md:flex md:flex-col gap-0.5 md:gap-1">
                 <span className="text-[14px] md:text-[16px] font-semibold text-[#002F5B] leading-[17px] md:leading-[19px]">{userName}</span>
                 <span className="text-[10px] md:text-[12px] text-[#686767] leading-[13px] md:leading-[15px]">Admin since {adminSince}</span>
@@ -92,7 +92,7 @@ export default function AdminNav({ userName, adminSince, profilePic }: AdminNavP
                   {/* Header */}
                   <div className="flex flex-row items-center gap-1.5 px-[10px] h-10 mb-2">
                     <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-                      {profilePic ? (
+              {profilePic ? (
                         <Image src={profilePic} alt={`${userName}'s profile`} width={40} height={40} className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-gray-500 text-sm font-medium">{userName.charAt(0).toUpperCase()}</span>

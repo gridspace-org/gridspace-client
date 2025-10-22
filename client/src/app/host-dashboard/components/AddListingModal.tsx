@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { X, Clock, ChevronDown, Wifi, Zap, Bath, Thermometer, Wind, Lightbulb, Monitor, Keyboard, Printer, Phone, Building, Coffee, Music, Car, Shield, Brush, Mail, User, Upload, Trash2, Info } from "lucide-react";
-import { spacesApi, CreateSpaceRequest } from "@/services/spacesApi";
+import { X, Clock, ChevronDown, Wifi, Zap, Bath, Monitor, Keyboard, Printer, Phone, Building, Coffee, Car, Upload, Trash2, Info, Wind } from "lucide-react";
+import { spacesApi } from "@/services/spacesApi";
 
 interface AddListingModalProps {
   isOpen: boolean;
@@ -66,52 +66,38 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
   const spaceTypes = [
-    "Coworking Space",
-    "Meeting Room",
-    "Private Office",
-    "Event Space",
-    "Conference Room",
+    'Remote Work', 'Study Session', 'Team Meetings', 
+    'Networking', 'Presentations', 'Creative Work',
+    'Interview', 'Training', 'Client Meeting'
   ];
 
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-  // Amenities data structure
+  // Amenities data structure - matching backend enum values
   const amenities: Amenity[] = [
     // Essentials
     { id: "wifi", name: "WiFi", icon: Wifi, category: "Essentials" },
-    { id: "power", name: "Power Outlets", icon: Zap, category: "Essentials" },
+    { id: "power", name: "Power Backup", icon: Zap, category: "Essentials" },
     { id: "restroom", name: "Restroom", icon: Bath, category: "Essentials" },
-    { id: "heating", name: "Heating", icon: Thermometer, category: "Essentials" },
     { id: "ac", name: "Air Conditioning", icon: Wind, category: "Essentials" },
-    { id: "lighting", name: "Good Lighting", icon: Lightbulb, category: "Essentials" },
     
     // Workspace
-    { id: "desk", name: "Desk and Chair", icon: Building, category: "Workspace" },
-    { id: "projector", name: "Projector/Screen", icon: Monitor, category: "Workspace" },
+    { id: "projector", name: "Projector", icon: Monitor, category: "Workspace" },
     { id: "whiteboard", name: "Whiteboard", icon: Keyboard, category: "Workspace" },
-    { id: "printer", name: "Printer Access", icon: Printer, category: "Workspace" },
-    { id: "meeting", name: "Meeting Room", icon: Building, category: "Workspace" },
-    { id: "phone", name: "Phone Booth", icon: Phone, category: "Workspace" },
+    { id: "printer", name: "Printer/Scanner", icon: Printer, category: "Workspace" },
+    { id: "monitor", name: "Monitor", icon: Monitor, category: "Workspace" },
+    { id: "phone", name: "Conference Phone", icon: Phone, category: "Workspace" },
     
     // Comfort
     { id: "kitchen", name: "Kitchen", icon: Building, category: "Comfort" },
-    { id: "coffee", name: "Coffee Machine", icon: Coffee, category: "Comfort" },
-    { id: "snacks", name: "Snacks Available", icon: Keyboard, category: "Comfort" },
-    { id: "lounge", name: "Lounge Area", icon: Building, category: "Comfort" },
-    { id: "outdoor", name: "Outdoor Services", icon: Building, category: "Comfort" },
-    { id: "music", name: "Background Music", icon: Music, category: "Comfort" },
+    { id: "coffee", name: "Coffee/Tea", icon: Coffee, category: "Comfort" },
     
     // Services
-    { id: "reception", name: "Reception Service", icon: Phone, category: "Services" },
-    { id: "parking", name: "Parking Access", icon: Car, category: "Services" },
-    { id: "security", name: "24/7 Security", icon: Shield, category: "Services" },
-    { id: "cleaning", name: "Daily Cleaning", icon: Brush, category: "Services" },
-    { id: "mail", name: "Mail Handling", icon: Mail, category: "Services" },
-    { id: "concierge", name: "Concierge Service", icon: User, category: "Services" },
+    { id: "parking", name: "Parking", icon: Car, category: "Services" },
   ];
 
   // Time slots for availability
@@ -366,30 +352,46 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
       setIsSubmitting(true);
       setSubmitError(null);
       
-      try {
-        // Prepare data for API
-        const spaceData: CreateSpaceRequest = {
-          title: formData.spaceName,
-          description: formData.description,
-          location: formData.location,
-          address: formData.fullAddress,
-          pricePerHour: parseInt(formData.hourlyRate),
-          capacity: parseInt(formData.capacity),
-          purposes: [formData.spaceType],
-          amenities: selectedAmenities.map(id => amenities.find(a => a.id === id)?.name || '').filter(Boolean),
-        };
+        try {
+          // Prepare form data to include files (actual File objects) so multer receives them
+          const fd = new FormData();
+          fd.append('title', formData.spaceName);
+          fd.append('description', formData.description);
+          fd.append('location', formData.location);
+          if (formData.fullAddress) fd.append('address', formData.fullAddress);
+          fd.append('pricePerHour', String(parseInt(formData.hourlyRate || '0')));
+          fd.append('capacity', String(parseInt(formData.capacity || '0')));
 
-        // Submit to API
-        await spacesApi.createSpace(spaceData);
-        
-        // Close modal on success
-        onClose();
-      } catch (error) {
-        console.error("Error submitting form:", error);
-        setSubmitError(error instanceof Error ? error.message : 'Failed to create listing');
-      } finally {
-        setIsSubmitting(false);
-      }
+          // purposes (spaceType) - backend expects array of strings
+          if (formData.spaceType) fd.append('purposes[]', formData.spaceType);
+
+          // amenities - send names expected by validator
+          const selectedAmenityNames = formData.selectedAmenities
+            .map(id => amenities.find(a => a.id === id)?.name)
+            .filter(Boolean) as string[];
+          selectedAmenityNames.forEach(name => fd.append('amenities[]', name));
+
+          // Append files using the original File objects, under 'images'
+          formData.uploadedPhotos.forEach((p, idx) => {
+            // ensure the file object exists
+            if (p.file) fd.append('images', p.file, p.file.name || `image_${idx}`);
+          });
+
+          // Note: the server createSpace validator doesn't accept timeSlots in the request body.
+          // Availability/time slots should be set using the update endpoint or a dedicated availability API.
+          // Therefore we intentionally do NOT append `timeSlots` here to avoid validation errors.
+
+          // Submit FormData to API
+          await spacesApi.createSpace(fd);
+
+          // Close modal on success
+          onClose();
+        } catch (error) {
+          console.error('Error submitting form:', error);
+          setSubmitError(error instanceof Error ? error.message : 'Failed to create listing');
+        } finally {
+          setIsSubmitting(false);
+        }
     }
   };
 

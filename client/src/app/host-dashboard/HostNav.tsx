@@ -3,6 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useAppDispatch } from "@/store/hooks";
+import { logout } from "@/store/slices/authSlice";
+import { useRouter } from "next/navigation";
 import { Search, Bell, Filter, User, Home, Calendar, LogOut } from "lucide-react";
 
 interface HostNavProps {
@@ -20,6 +23,8 @@ export default function HostNav({
 }: HostNavProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const dispatch = useAppDispatch();
+  const router = useRouter();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -85,15 +90,16 @@ export default function HostNav({
               aria-haspopup="menu"
               aria-expanded={isMenuOpen}
               onClick={() => setIsMenuOpen((prev) => !prev)}
-              className="w-8 h-8 md:w-[49px] md:h-[49px] bg-[#E7E7E7] rounded-full flex items-center justify-center overflow-hidden"
+              className="w-8 h-8 md:min-h-[49px] md:min-w-[49px] md:w-[49px] md:h-[49px] bg-[#E7E7E7] rounded-full flex items-center justify-center overflow-hidden"
             >
               <Bell className="w-4 h-4 md:w-7 md:h-7 text-[#121212]" />
             </button>
             <div className="flex items-center gap-2 md:gap-[6px]">
+              {/* Mobile: toggle menu */}
               <button
                 type="button"
                 onClick={() => setIsMenuOpen((prev) => !prev)}
-                className="w-10 h-10 min-w-10 min-h-10 md:min-w-[70px] md:min-h-[70px] md:w-[70px] md:h-[70px] bg-gray-200 rounded-full overflow-hidden"
+                className="w-10 h-10 min-w-10 min-h-10 md:hidden bg-gray-200 rounded-full overflow-hidden"
                 aria-label="Open profile menu"
               >
                 {profilePic ? (
@@ -112,6 +118,29 @@ export default function HostNav({
                   </div>
                 )}
               </button>
+
+              {/* Desktop: navigate to host profile */}
+              <Link
+                href="/host-dashboard/profile"
+                className="hidden md:inline-block w-10 h-10 md:min-h-[70px] md:min-w-[70px] md:w-[70px] md:h-[70px] bg-gray-200 rounded-full overflow-hidden"
+                aria-label="Go to profile"
+              >
+                {profilePic ? (
+                  <Image
+                    src={profilePic}
+                    alt={`${userName}'s profile`}
+                    width={70}
+                    height={70}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 rounded-full flex items-center justify-center">
+                    <span className="text-gray-500 text-sm font-medium">
+                      {userName.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+              </Link>
               <div className=" hidden md:flex md:flex-col gap-0.5 md:gap-1">
                 <div className="flex items-center gap-2">
                   <span className="text-[14px] md:text-[16px] font-semibold text-[#002F5B] leading-[17px] md:leading-[19px]">
@@ -136,8 +165,8 @@ export default function HostNav({
                   className="absolute right-0 top-12 block md:hidden z-50 w-[188px] h-auto bg-white rounded-lg p-3 shadow-xl"
                 >
                   {/* Header profile block */}
-                  <div className="flex flex-row items-center gap-1.5 px-[10px] h-10 mb-2">
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                  <div className="flex flex-row items-center gap-1.5 px-[10px] h-fit mb-4">
+                    <div className="w-10 h-10 max-md:min-h-10 max-md:min-w-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
                       {profilePic ? (
                         <Image
                           src={profilePic}
@@ -154,7 +183,11 @@ export default function HostNav({
                     </div>
                     <div className="flex flex-col h-9">
                       <span className="text-[14px] leading-[17px] font-semibold text-[#002F5B]">
-                        {userName}
+                        {(() => {
+                          const names = userName.trim().split(" ");
+                          if (names.length === 1) return names[0];
+                          return `${names[0]} ${names[names.length - 1]}`;
+                          })()}
                       </span>
                       <span className="text-[12px] leading-[15px] text-[#686767]">
                         Host
@@ -166,7 +199,7 @@ export default function HostNav({
                   <div className="flex flex-col w-[164px]">
                     <div className="border-t border-[#D1D5DB]/50" />
                     <Link
-                      href="/host-dashboard"
+                      href="/host-dashboard/profile"
                       className="flex flex-row items-center gap-3 px-4 h-8 text-[#121212] rounded-md hover:bg-[#F3F4F6]"
                       onClick={() => setIsMenuOpen(false)}
                     >
@@ -183,41 +216,33 @@ export default function HostNav({
                       <span className="text-[14px] leading-[17px] font-medium">My Listings</span>
                     </Link>
 
-                    <Link
-                      href="/host-dashboard/calendar"
-                      className="flex flex-row items-center gap-3 px-4 h-8 text-[#121212] rounded-md hover:bg-[#F3F4F6]"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Calendar className="w-[18px] h-[18px] text-[#002F5B]" />
+                    <div className="flex flex-row items-center gap-3 px-4 h-8 text-[#9CA3AF] rounded-md opacity-50 cursor-not-allowed">
+                      <Calendar className="w-[18px] h-[18px] text-[#9CA3AF]" />
                       <span className="text-[14px] leading-[17px] font-medium">Calendar</span>
-                    </Link>
+                    </div>
 
-                    <Link
-                      href="/host-dashboard/earnings"
-                      className="flex flex-row items-center gap-3 px-4 h-8 text-[#121212] rounded-md hover:bg-[#F3F4F6]"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <svg className="w-[18px] h-[18px] text-[#002F5B]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <div className="flex flex-row items-center gap-3 px-4 h-8 text-[#9CA3AF] rounded-md opacity-50 cursor-not-allowed">
+                      <svg className="w-[18px] h-[18px] text-[#9CA3AF]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M3 3h18v18H3z" fill="none"/>
-                        <path d="M5 12h14M5 8h14M5 16h14" stroke="#002F5B" strokeWidth="2" strokeLinecap="round"/>
+                        <path d="M5 12h14M5 8h14M5 16h14" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round"/>
                       </svg>
                       <span className="text-[14px] leading-[17px] font-medium">Earnings</span>
-                    </Link>
+                    </div>
 
-                    <Link
-                      href="/host-dashboard"
-                      className="flex flex-row items-center gap-3 px-4 h-8 text-[#121212] rounded-md hover:bg-[#F3F4F6]"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Bell className="w-[18px] h-[18px] text-[#121212]" />
+                    <div className="flex flex-row items-center gap-3 px-4 h-8 text-[#9CA3AF] rounded-md opacity-50 cursor-not-allowed">
+                      <Bell className="w-[18px] h-[18px] text-[#9CA3AF]" />
                       <span className="text-[14px] leading-[17px] font-medium">Notifications</span>
-                    </Link>
+                    </div>
 
                     <div className="border-b border-[#D1D5DB]/50" />
 
                     <button
                       type="button"
-                      onClick={() => setIsMenuOpen(false)}
+                      onClick={async () => {
+                        setIsMenuOpen(false);
+                        await dispatch(logout());
+                        router.push('/');
+                      }}
                       className="flex flex-row items-center gap-3 px-4 h-8 text-[#B91C1C] rounded-md hover:bg-[#FEE2E2]"
                     >
                       <LogOut className="w-[18px] h-[18px] text-[#B91C1C]" />

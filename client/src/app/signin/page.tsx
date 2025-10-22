@@ -199,7 +199,7 @@ export default function SignInPage() {
                   onError={(error) => setError(error)}
                   onSuccess={() => setShowLoader(true)}
                 />
-                <button className="flex-1 h-[56px] sm:h-[60px] px-4 py-3 rounded-lg border border-[var(--color-secondary)] flex items-center justify-center gap-2 transition-all duration-300 hover:bg-gray-100 hover:text-[var(--color-secondary)] hover:shadow-sm">
+                <button className="hidden flex-1 h-[56px] sm:h-[60px] px-4 py-3 rounded-lg border border-[var(--color-secondary)] flex items-center justify-center gap-2 transition-all duration-300 hover:bg-gray-100 hover:text-[var(--color-secondary)] hover:shadow-sm">
                   <Image
                     src="/facebook.png"
                     alt="Facebook"
@@ -208,7 +208,7 @@ export default function SignInPage() {
                   />
                   <span className="text-[16px]">Facebook</span>
                 </button>
-                <button className="flex-1 h-[56px] sm:h-[60px] px-4 py-3 rounded-lg border border-[var(--color-secondary)] flex items-center justify-center gap-2 transition-all duration-300 hover:bg-gray-100 hover:text-[var(--color-secondary)] hover:shadow-sm">
+                <button className="hidden flex-1 h-[56px] sm:h-[60px] px-4 py-3 rounded-lg border border-[var(--color-secondary)] flex items-center justify-center gap-2 transition-all duration-300 hover:bg-gray-100 hover:text-[var(--color-secondary)] hover:shadow-sm">
                   <Image src="/apple.png" alt="Apple" width={30} height={30} />
                   <span className="text-[16px]">Apple</span>
                 </button>

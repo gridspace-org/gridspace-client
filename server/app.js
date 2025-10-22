@@ -91,14 +91,14 @@ const app = express();
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI, {
-      // Current Mongoose options (v8+)
-      maxPoolSize: 10, // Maximum connection pool size
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
-      // Security options
-      ssl: process.env.NODE_ENV === 'production', // Use SSL in production
-      // Performance monitoring
-      monitorCommands: process.env.NODE_ENV === 'development'
+      // // Current Mongoose options (v8+)
+      // maxPoolSize: 10, // Maximum connection pool size
+      // serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+      // socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+      // // Security options
+      // ssl: process.env.NODE_ENV === 'production', // Use SSL in production
+      // // Performance monitoring
+      // monitorCommands: process.env.NODE_ENV === 'development'
     });
     logger.info("Connected to MongoDB successfully");
   } catch (error) {

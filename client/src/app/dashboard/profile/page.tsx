@@ -2,14 +2,45 @@
 
 import { Edit2, Mail, Phone, Check, Shield, Lock, LogOut, Trash2, MessageSquare, Bell } from "lucide-react";
 import { useState } from "react";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { logout, deleteAccount, requestEmailVerification } from "@/store/slices/authSlice";
+import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
+  const user = useAppSelector((s) => s.auth.user);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [marketingEmails, setMarketingEmails] = useState(false);
   const [bookingReminders, setBookingReminders] = useState(true);
   const [hostMessages, setHostMessages] = useState(true);
+
+  const fullName = (user?.fullname || user?.name || "").trim();
+  const [firstName = "", ...rest] = fullName.split(" ");
+  const lastName = rest.join(" ") || "";
+  const initials = fullName
+    ? fullName
+        .split(" ")
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : "U";
+
+  const email = user?.email || "";
+  const phone = (user as { phonenumber?: string; phone?: string })?.phonenumber || (user as { phonenumber?: string; phone?: string })?.phone || "";
+  const profilePic = user?.profilePic || user?.profilepic || null;
+  const emailVerified = !!user?.emailVerified;
+
+  const dispatch = useAppDispatch();
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const profilePicUrl = typeof profilePic === 'string'
+    ? profilePic
+    : profilePic && typeof (profilePic as { url?: string }).url === 'string'
+    ? (profilePic as { url: string }).url
+    : '';
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 md:px-8 py-6">
@@ -36,7 +67,12 @@ export default function ProfilePage() {
             <div className="flex-shrink-0">
               <div className="w-[70px] md:w-[130px] h-[70px] md:h-[130px] bg-gray-200 rounded-full overflow-hidden">
                 <div className="w-full h-full bg-gray-300 rounded-full flex items-center justify-center">
-                  <span className="text-gray-600 text-lg md:text-2xl font-medium">SJ</span>
+                  {profilePicUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={profilePicUrl} alt={fullName || 'User'} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-gray-600 text-lg md:text-2xl font-medium">{initials}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -52,7 +88,7 @@ export default function ProfilePage() {
                   <div className="bg-[#F9FBFC] border border-[#E0E5EF] rounded-[8px] p-3">
                     <input
                       type="text"
-                      value="Sarah"
+                      value={firstName}
                       className="w-full bg-transparent text-[14px] text-[#121212] leading-[17px] outline-none"
                       readOnly
                     />
@@ -65,7 +101,7 @@ export default function ProfilePage() {
                   <div className="bg-[#F9FBFC] border border-[#E0E5EF] rounded-[8px] p-3">
                     <input
                       type="text"
-                      value="Johnson"
+                      value={lastName}
                       className="w-full bg-transparent text-[14px] text-[#121212] leading-[17px] outline-none"
                       readOnly
                     />
@@ -83,7 +119,7 @@ export default function ProfilePage() {
                     <div className="flex items-center gap-2">
                       <Mail className="w-4 h-4 md:w-5 md:h-5 text-[#999999]" />
                       <span className="text-[14px] md:text-[16px] text-[#121212] leading-[17px] md:leading-[19px]">
-                        sarahjohn@gmail.com
+                        {email || 'Not provided'}
                       </span>
                     </div>
                     <Check className="w-4 h-4 text-[#2BD16A]" />
@@ -101,7 +137,7 @@ export default function ProfilePage() {
                     <div className="flex items-center gap-2">
                       <Phone className="w-4 h-4 md:w-5 md:h-5 text-[#999999]" />
                       <span className="text-[14px] md:text-[16px] text-[#121212] leading-[17px] md:leading-[19px]">
-                        09123456789
+                        {phone || 'Not provided'}
                       </span>
                     </div>
                     <Check className="w-4 h-4 text-[#2BD16A]" />
@@ -129,53 +165,88 @@ export default function ProfilePage() {
                       Email Verification
                     </h3>
                     <p className="text-[12px] md:text-[16px] text-[#6D6D6D] leading-[15px] md:leading-[19px]">
-                      Verify your email address
+                      {email || 'No email provided'}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center justify-center w-[61px] h-[25px] bg-[#DCFCE7] rounded-[100px]">
-                  <span className="text-[12px] text-[#166534] leading-[15px]">verified</span>
+                <div className="flex items-center gap-3">
+                  {emailVerified ? (
+                    <div className="flex items-center justify-center w-[78px] h-[28px] bg-[#DCFCE7] rounded-[100px]">
+                      <span className="text-[12px] text-[#166534] leading-[15px]">verified</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center w-[78px] h-[28px] bg-[#FEF3C7] rounded-[100px]">
+                        <span className="text-[12px] text-[#92400E] leading-[15px]">unverified</span>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          setSendingVerification(true);
+                          try {
+                            await dispatch(requestEmailVerification(email));
+                            alert('Verification email sent');
+                          } finally {
+                            setSendingVerification(false);
+                          }
+                        }}
+                        className="text-sm px-3 py-1 bg-[#F25417] text-white rounded"
+                        disabled={sendingVerification}
+                      >
+                        {sendingVerification ? 'Sending…' : 'Resend'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Phone Verification */}
-            <div className="bg-[#F9FBFC] border border-[#E0E5EF] rounded-[12px] p-3 md:p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 md:gap-6">
-                  <Phone className="w-5 h-5 min-h-5 min-w-5 md:w-6 md:h-6 text-[#002F5B]" />
-                  <div>
-                    <h3 className="text-[16px] md:text-[18px] font-semibold text-[#002F5B] leading-[19px] md:leading-[22px]">
-                      Phone Verification
-                    </h3>
-                    <p className="text-[12px] md:text-[16px] text-[#6D6D6D] leading-[15px] md:leading-[19px]">
-                      Verify your phone number
-                    </p>
+            {/* Phone Verification - feature not ready */}
+            <div className="relative">
+              <div className="bg-[#F9FBFC] border border-[#E0E5EF] rounded-[12px] p-3 md:p-4 opacity-60 pointer-events-none">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 md:gap-6">
+                    <Phone className="w-5 h-5 min-h-5 min-w-5 md:w-6 md:h-6 text-[#002F5B]" />
+                    <div>
+                      <h3 className="text-[16px] md:text-[18px] font-semibold text-[#002F5B] leading-[19px] md:leading-[22px]">
+                        Phone Verification
+                      </h3>
+                      <p className="text-[12px] md:text-[16px] text-[#6D6D6D] leading-[15px] md:leading-[19px]">
+                        Verify your phone number
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center w-[61px] h-[25px] bg-[#DCFCE7] rounded-[100px]">
+                    <span className="text-[12px] text-[#166534] leading-[15px]">verified</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-center w-[61px] h-[25px] bg-[#DCFCE7] rounded-[100px]">
-                  <span className="text-[12px] text-[#166534] leading-[15px]">verified</span>
-                </div>
+              </div>
+              <div className="absolute top-3 right-3">
+                <span className="text-[12px] bg-[#E5E7EB] text-[#6B7280] px-2 py-1 rounded">Coming soon</span>
               </div>
             </div>
 
-            {/* ID Verification */}
-            <div className="bg-[#F9FBFC] border border-[#E0E5EF] rounded-[12px] p-3 md:p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 md:gap-6">
-                  <Shield className="w-5 h-5 min-h-5 min-w-5 md:w-6 md:h-6 text-[#002F5B]" />
-                  <div>
-                    <h3 className="text-[16px] md:text-[18px] font-semibold text-[#002F5B] leading-[19px] md:leading-[22px]">
-                      Identity Verification
-                    </h3>
-                    <p className="text-[12px] md:text-[16px] text-[#6D6D6D] leading-[15px] md:leading-[19px]">
-                      Upload government ID for enhanced security
-                    </p>
+            {/* ID Verification - feature not ready */}
+            <div className="relative">
+              <div className="bg-[#F9FBFC] border border-[#E0E5EF] rounded-[12px] p-3 md:p-4 opacity-60 pointer-events-none">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 md:gap-6">
+                    <Shield className="w-5 h-5 min-h-5 min-w-5 md:w-6 md:h-6 text-[#002F5B]" />
+                    <div>
+                      <h3 className="text-[16px] md:text-[18px] font-semibold text-[#002F5B] leading-[19px] md:leading-[22px]">
+                        Identity Verification
+                      </h3>
+                      <p className="text-[12px] md:text-[16px] text-[#6D6D6D] leading-[15px] md:leading-[19px]">
+                        Upload government ID for enhanced security
+                      </p>
+                    </div>
                   </div>
+                  <button disabled className="bg-gray-300 text-[#6B7280] px-3 md:px-4 py-2 md:py-3 rounded-[8px]">
+                    <span className="text-[12px] md:text-[16px] whitespace-nowrap font-semibold">Upload ID</span>
+                  </button>
                 </div>
-                <button className="bg-[#F25417] text-white px-3 md:px-4 py-2 md:py-3 rounded-[8px] hover:bg-[#E0450F] transition-colors">
-                  <span className="text-[12px] md:text-[16px] whitespace-nowrap font-semibold">Upload ID</span>
-                </button>
+              </div>
+              <div className="absolute top-3 right-3">
+                <span className="text-[12px] bg-[#E5E7EB] text-[#6B7280] px-2 py-1 rounded">Coming soon</span>
               </div>
             </div>
           </div>
@@ -187,22 +258,27 @@ export default function ProfilePage() {
             Security
           </h2>
           
-          <div className="bg-[#F9FBFC] border border-[#E0E5EF] rounded-[12px] p-3 md:p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 md:gap-6">
-                <Lock className="w-5 h-5 min-h-5 min-w-5 md:w-6 md:h-6 text-[#002F5B]" />
-                <div>
-                  <h3 className="text-[16px] md:text-[18px] font-semibold text-[#002F5B] leading-[19px] md:leading-[22px]">
-                    Password
-                  </h3>
-                  <p className="text-[12px] md:text-[16px] text-[#6D6D6D] leading-[15px] md:leading-[19px]">
-                    Last changed 3 months ago
-                  </p>
+          <div className="relative">
+            <div className="bg-[#F9FBFC] border border-[#E0E5EF] rounded-[12px] p-3 md:p-4 opacity-60 pointer-events-none">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 md:gap-6">
+                  <Lock className="w-5 h-5 min-h-5 min-w-5 md:w-6 md:h-6 text-[#002F5B]" />
+                  <div>
+                    <h3 className="text-[16px] md:text-[18px] font-semibold text-[#002F5B] leading-[19px] md:leading-[22px]">
+                      Password
+                    </h3>
+                    <p className="text-[12px] md:text-[16px] text-[#6D6D6D] leading-[15px] md:leading-[19px]">
+                      Last changed 3 months ago
+                    </p>
+                  </div>
                 </div>
+                <button disabled className="border border-gray-300 text-[#9CA3AF] px-3 md:px-4 py-2 md:py-3 rounded-[8px]">
+                  <span className="text-[12px] md:text-[16px] whitespace-nowrap font-semibold">Change Password</span>
+                </button>
               </div>
-              <button className="border border-[#F25417] text-[#F25417] px-3 md:px-4 py-2 md:py-3 rounded-[8px] hover:bg-[#F25417] hover:text-white transition-colors">
-                <span className="text-[12px] md:text-[16px] whitespace-nowrap font-semibold">Change Password</span>
-              </button>
+            </div>
+            <div className="absolute top-3 right-3">
+              <span className="text-[12px] bg-[#E5E7EB] text-[#6B7280] px-2 py-1 rounded">Coming soon</span>
             </div>
           </div>
         </div>
@@ -362,9 +438,15 @@ export default function ProfilePage() {
             <div className="bg-[#F9FBFC] border border-[#E0E5EF] rounded-[12px] p-3 md:p-4">
               <div className="flex items-center gap-2">
                 <LogOut className="w-5 h-5 md:w-6 md:h-6 text-[#002F5B]" />
-                <span className="text-[18px] md:text-[20px] font-semibold text-[#002F5B] leading-[22px] md:leading-[24px]">
+                <button
+                  onClick={async () => {
+                    await dispatch(logout());
+                    router.push('/');
+                  }}
+                  className="text-[18px] md:text-[20px] font-semibold text-[#002F5B] leading-[22px] md:leading-[24px]"
+                >
                   Logout
-                </span>
+                </button>
               </div>
             </div>
 
@@ -372,9 +454,22 @@ export default function ProfilePage() {
             <div className="bg-[#F9FBFC] border border-[#E0E5EF] rounded-[12px] p-3 md:p-4">
               <div className="flex items-center gap-2">
                 <Trash2 className="w-5 h-5 md:w-6 md:h-6 text-[#B91C1C]" />
-                <span className="text-[18px] md:text-[20px] font-semibold text-[#B91C1C] leading-[22px] md:leading-[24px]">
-                  Delete Account
-                </span>
+                <button
+                  onClick={async () => {
+                    if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) return;
+                    setIsDeleting(true);
+                    try {
+                      await dispatch(deleteAccount(''));
+                      router.push('/');
+                    } finally {
+                      setIsDeleting(false);
+                    }
+                  }}
+                  className="text-[18px] md:text-[20px] font-semibold text-[#B91C1C] leading-[22px] md:leading-[24px]"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Deleting…' : 'Delete Account'}
+                </button>
               </div>
             </div>
           </div>

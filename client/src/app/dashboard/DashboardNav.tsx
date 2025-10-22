@@ -3,7 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Search, Bell, Filter, Calendar, Wallet, MessageCircle } from "lucide-react";
+import { Search, Bell, Filter, Calendar, Wallet, MessageCircle, User, LogOut } from "lucide-react";
+import { useAppDispatch } from "@/store/hooks";
+import { logout } from "@/store/slices/authSlice";
+import { useRouter } from "next/navigation";
 
 interface DashboardNavProps {
   userName: string;
@@ -19,6 +22,8 @@ export default function DashboardNav({
 }: DashboardNavProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const dispatch = useAppDispatch();
+  const router = useRouter();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -75,19 +80,25 @@ export default function DashboardNav({
 
           {/* User Profile Section */}
           <div className="flex items-center gap-2 md:gap-3 relative" ref={menuRef}>
-            <div className="w-8 h-8 md:w-[49px] md:h-[49px] bg-[#E7E7E7] rounded-full flex sm:hidden items-center justify-center">
+            <Link
+              href="/search"
+              className="w-8 h-8 md:w-[49px] md:h-[49px] bg-[#E7E7E7] rounded-full flex sm:hidden items-center justify-center"
+              onClick={() => setIsMenuOpen(false)}
+              aria-label="Search"
+            >
               <Search className="w-5 h-5 md:w-7 md:h-7 text-[#121212]" />
-            </div>
+            </Link>
             <div className="w-8 h-8 md:w-[49px] md:h-[49px] bg-[#E7E7E7] rounded-full flex items-center justify-center">
               <Bell className="w-4 h-4 md:w-7 md:h-7 text-[#121212]" />
             </div>
             <div className="flex items-center gap-2 md:gap-[6px]">
+              {/* Mobile: toggle menu */}
               <button
                 type="button"
                 aria-haspopup="menu"
                 aria-expanded={isMenuOpen}
                 onClick={() => setIsMenuOpen((prev) => !prev)}
-                className="min-w-10 min-h-10 w-10 h-10 md:w-[70px] md:h-[70px] md:min-w-[70px] md:min-h-[70px] bg-gray-200 rounded-full overflow-hidden"
+                className="min-w-10 min-h-10 w-10 h-10 md:hidden bg-gray-200 rounded-full overflow-hidden"
                 aria-label="Open profile menu"
               >
                 {profilePic ? (
@@ -106,6 +117,29 @@ export default function DashboardNav({
                   </div>
                 )}
               </button>
+
+              {/* Desktop: navigate to dashboard profile */}
+              <Link
+                href="/dashboard/profile"
+                className="hidden md:inline-block min-w-10 min-h-10 w-10 h-10 md:w-[70px] md:h-[70px] md:min-w-[70px] md:min-h-[70px] bg-gray-200 rounded-full overflow-hidden"
+                aria-label="Go to profile"
+              >
+                {profilePic ? (
+                  <Image
+                    src={profilePic}
+                    alt={`${userName}'s profile`}
+                    width={70}
+                    height={70}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 rounded-full flex items-center justify-center">
+                    <span className="text-gray-500 text-sm font-medium">
+                      {userName.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+              </Link>
               <div className=" hidden md:flex md:flex-col gap-0.5 md:gap-1">
                 <span className="text-[14px] md:text-[16px] font-semibold text-[#002F5B] leading-[17px] md:leading-[19px]">
                   {userName}
@@ -150,13 +184,24 @@ export default function DashboardNav({
                   <div className="flex flex-col w-[164px]">
                     <div className="border-t border-[#D1D5DB]/50" />
 
+                    
+                    {/* Profile link */}
                     <Link
-                      href="/dashboard/search"
+                      href="/dashboard/profile"
+                      className="flex flex-row items-center gap-3 px-4 h-8 text-[#121212] rounded-md hover:bg-[#F3F4F6]"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <User className="w-[18px] h-[18px] text-[#121212]" />
+                      <span className="text-[14px] leading-[17px] font-medium">Profile</span>
+                    </Link>
+
+                    <Link
+                      href="/search"
                       className="flex flex-row items-center gap-3 px-4 h-8 text-[#121212] rounded-md hover:bg-[#F3F4F6]"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <Search className="w-[18px] h-[18px] text-[#121212]" />
-                      <span className="text-[14px] leading-[17px] font-medium">Find Workspace</span>
+                      <span className="text-[14px] leading-[17px] font-medium">Find Space</span>
                     </Link>
 
                     <Link
@@ -168,23 +213,34 @@ export default function DashboardNav({
                       <span className="text-[14px] leading-[17px] font-medium">My Bookings</span>
                     </Link>
 
-                    <Link
-                      href="/dashboard/wallet"
-                      className="flex flex-row items-center gap-3 px-4 h-8 text-[#121212] rounded-md hover:bg-[#F3F4F6]"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Wallet className="w-[18px] h-[18px] text-[#002F5B]" />
+                    {/* Disabled items: Wallet and Message */}
+                    <div className="flex flex-row items-center gap-3 px-4 h-8 text-[#9CA3AF] rounded-md opacity-50 cursor-not-allowed">
+                      <Wallet className="w-[18px] h-[18px] text-[#9CA3AF]" />
                       <span className="text-[14px] leading-[17px] font-medium">Wallet</span>
-                    </Link>
+                    </div>
 
-                    <Link
-                      href="/dashboard/message"
-                      className="flex flex-row items-center gap-3 px-4 h-8 text-[#121212] rounded-md hover:bg-[#F3F4F6]"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <MessageCircle className="w-[18px] h-[18px] text-[#002F5B]" />
+                    <div className="flex flex-row items-center gap-3 px-4 h-8 text-[#9CA3AF] rounded-md opacity-50 cursor-not-allowed">
+                      <MessageCircle className="w-[18px] h-[18px] text-[#9CA3AF]" />
                       <span className="text-[14px] leading-[17px] font-medium">Message</span>
-                    </Link>
+                    </div>
+
+                    <div className="border-b border-[#D1D5DB]/50" />
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setIsMenuOpen(false);
+                        try {
+                          await dispatch(logout());
+                        } finally {
+                          router.push('/');
+                        }
+                      }}
+                      className="flex flex-row items-center gap-3 px-4 h-8 text-[#B91C1C] rounded-md hover:bg-[#FEE2E2]"
+                    >
+                      <LogOut className="w-[18px] h-[18px] text-[#B91C1C]" />
+                      <span className="text-[14px] leading-[17px] font-medium">Log Out</span>
+                    </button>
                   </div>
                 </div>
               )}

@@ -5,9 +5,10 @@ import {
   Calendar,
   Wallet,
   MessageCircle,
+  ArrowLeft,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import {WorkspaceCard } from "../components";
+// import {WorkspaceCard } from "../components";
 import DashboardCard from "./DashboardCard";
 import { useAppSelector } from "@/store/hooks";
 
@@ -31,13 +32,21 @@ export default function DashboardPage() {
     <>
       {/* Welcome Section */}
         <div className="max-w-[1440px] mx-auto px-4 md:px-8 pt-4 pb-4">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-[16px] leading-[19px] md:text-[32px] md:leading-[39px] font-bold text-[#002F5B]">
-              Welcome {userInfo.name.split(" ")[0]}!
-            </h1>
-            <p className="text-[12px] leading-[15px] md:text-[18px] md:leading-[22px] text-[#686767] tracking-[-0.25px]">
-              Discover your next workspace or manage existing bookings
-            </p>
+          <div className="flex items-center gap-2 sm:gap-6">
+            <button 
+              onClick={() => router.back()}
+              className="flex items-center justify-center w-6 h-6 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6 text-[#121212]" />
+            </button>
+            <div className="flex flex-col gap-1">
+              <h1 className="text-[16px] leading-[19px] md:text-[32px] md:leading-[39px] font-bold text-[#002F5B]">
+                Welcome {userInfo.name.split(" ")[0]}!
+              </h1>
+              <p className="text-[12px] leading-[15px] md:text-[18px] md:leading-[22px] text-[#686767] tracking-[-0.25px]">
+                Discover your next workspace or manage existing bookings
+              </p>
+            </div>
           </div>
         </div>
 
@@ -49,7 +58,7 @@ export default function DashboardPage() {
                 icon={Search}
                 title="Find Workspace"
                 description="Search for available workspace"
-                onClick={() => handleCardClick("/dashboard/search")}
+                href="/search"
               />
             </div>
             <div className="w-full">
@@ -66,6 +75,7 @@ export default function DashboardPage() {
                 title="Wallet"
                 description={userInfo.wallet}
                 onClick={() => handleCardClick("/dashboard/wallet")}
+                disabled
               />
             </div>
             <div className="w-full">
@@ -74,6 +84,7 @@ export default function DashboardPage() {
                 title="Message"
                 description="Chat with host"
                 onClick={() => handleCardClick("/dashboard/message")}
+                disabled
               />
             </div>
           </div>
@@ -96,14 +107,11 @@ export default function DashboardPage() {
                 <p className="text-[16px] md:text-[16px] font-medium text-[#6F6F6F] text-center">
                   No activity yet
                 </p>
-                <button 
-                  onClick={() => handleCardClick("/dashboard/search")}
-                  className="flex items-center justify-center px-6 py-[10px] bg-[#F25417] text-white rounded-lg mt-2 w-[220px] h-10 md:w-[235px] md:h-[45px] hover:bg-[#E0450F] transition-colors"
-                >
+                <a href="/search" className="flex items-center justify-center px-6 py-[10px] bg-[#F25417] text-white rounded-lg mt-2 w-[220px] h-10 md:w-[235px] md:h-[45px] hover:bg-[#E0450F] transition-colors">
                   <span className="text-[16px] md:text-[18px] font-semibold">
                     Book your first Space
                   </span>
-                </button>
+                </a>
               </div>
             </div>
 
@@ -113,13 +121,13 @@ export default function DashboardPage() {
                 Recommended Space
               </h2>
 
-              <WorkspaceCard
+              {/* <WorkspaceCard
                 image="/space1.png"
                 name="Urban Coworking Hub"
                 location="Victoria Island, Lagos"
                 rating={4.75}
                 price="₦5000/day"
-              />
+              /> */}
             </div>
           </div>
         </div>

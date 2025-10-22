@@ -1,15 +1,16 @@
-const jwt = require("jsonwebtoken");
-const crypto = require("crypto");
-const User = require("../models/User");
-const PasswordReset = require("../models/PasswordReset");
-const EmailVerification = require("../models/EmailVerification");
-const cloudinary = require("../config/cloudinary");
-const { verifyGoogleToken, getGoogleAuthUrl, getTokensFromCode } = require("../config/googleAuth");
-const { generateSecureOTP, verifyOTP, isOTPExpired } = require("../services/otpService");
-const emailService = require("../services/emailService");
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import bcrypt from "bcrypt";
+import User from "../models/User.model.js";
+import PasswordReset from "../models/PasswordReset.js";
+import EmailVerification from "../models/EmailVerification.js";
+import cloudinary from "../config/cloudinary.js";
+import { verifyGoogleToken, getGoogleAuthUrl, getTokensFromCode } from "../config/googleAuth.js";
+import { generateSecureOTP, verifyOTP, isOTPExpired } from "../services/otpService.js";
+import emailService from "../services/emailService.js";
 
 // Helper function to generate JWT token
-const generateToken = (userId) => {
+export const generateToken = (userId) => {
   return jwt.sign(
     {
       id: userId,
@@ -457,9 +458,23 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    // Update password
-    user.password = newPassword;
-    await user.save();
+    // Hash the new password using bcrypt
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password using findByIdAndUpdate to avoid validation issues
+    await User.findByIdAndUpdate(
+      user._id,
+      { 
+        password: hashedPassword,
+        // Ensure authProvider is set if not already set
+        ...(user.authProvider ? {} : { authProvider: 'local' })
+      },
+      { 
+        new: true,
+        runValidators: false // Skip validation for password reset
+      }
+    );
 
     // Mark token as used
     passwordReset.used = true;
@@ -479,7 +494,7 @@ export const resetPassword = async (req, res) => {
 };
 
 // Verify password reset OTP (without consuming it)
-const verifyPasswordResetOtp = async (req, res) => {
+export const verifyPasswordResetOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
@@ -714,7 +729,7 @@ export const verifyEmail = async (req, res) => {
 };
 
 // Resend email verification OTP
-const resendEmailVerification = async (req, res) => {
+export const resendEmailVerification = async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -1113,23 +1128,23 @@ export const googleCallback = async (req, res) => {
   }
 };
 
-module.exports = {
-  signup,
-  signin,
-  getProfile,
-  updateProfile,
-  completeOnboarding,
-  changePassword,
-  requestPasswordReset,
-  resetPassword,
-  verifyPasswordResetOtp,
-  requestEmailVerification,
-  verifyEmail,
-  resendEmailVerification,
-  logout,
-  refreshToken,
-  deleteAccount,
-  googleAuth,
-  getGoogleAuthUrlController,
-  googleCallback,
-};
+// module.exports = {
+//   signup,
+//   signin,
+//   getProfile,
+//   updateProfile,
+//   completeOnboarding,
+//   changePassword,
+//   requestPasswordReset,
+//   resetPassword,
+//   verifyPasswordResetOtp,
+//   requestEmailVerification,
+//   verifyEmail,
+//   resendEmailVerification,
+//   logout,
+//   refreshToken,
+//   deleteAccount,
+//   googleAuth,
+//   getGoogleAuthUrlController,
+//   googleCallback,
+// };

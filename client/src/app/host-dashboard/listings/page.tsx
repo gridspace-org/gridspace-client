@@ -3,21 +3,12 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Plus, Eye, Edit, Calendar, ChevronDown, Star } from "lucide-react";
 import AddListingModal from "../components/AddListingModal";
+import ViewEditListingModal from "../components/ViewEditListingModal";
 import EmptyState from "../components/EmptyState";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { spacesApi, Space } from "@/services/spacesApi";
 
-type Listing = {
-  id: string;
-  name: string;
-  location: string;
-  status: "Completed" | "Pending";
-  dailyRate: string;
-  ratingText: string; // e.g. 4.5 (120 reviews)
-  type: string;
-  capacity: string;
-  totalBookings: number;
-};
+// Listing type was unused and has been removed to satisfy lint rules
 
 type BookingRow = {
   id: string;
@@ -28,52 +19,6 @@ type BookingRow = {
   amount: string;
 };
 
-const mockListings: Listing[] = [
-  {
-    id: "1",
-    name: "Urban Coworking Hub",
-    location: "Victoria Island, Lagos",
-    status: "Completed",
-    dailyRate: "₦10,000/day",
-    ratingText: "4.5 (120 reviews)",
-    type: "Shared Desk",
-    capacity: "50 People",
-    totalBookings: 10,
-  },
-  {
-    id: "2",
-    name: "Creative Hub",
-    location: "Ikeja, Lagos",
-    status: "Completed",
-    dailyRate: "₦10,000/day",
-    ratingText: "4.5 (120 reviews)",
-    type: "Shared Desk",
-    capacity: "50 People",
-    totalBookings: 10,
-  },
-  {
-    id: "3",
-    name: "Urban Coworking Hub",
-    location: "Victoria Island, Lagos",
-    status: "Pending",
-    dailyRate: "₦10,000/day",
-    ratingText: "4.5 (120 reviews)",
-    type: "Shared Desk",
-    capacity: "50 People",
-    totalBookings: 10,
-  },
-  {
-    id: "4",
-    name: "Urban Coworking Hub",
-    location: "Victoria Island, Lagos",
-    status: "Pending",
-    dailyRate: "₦5,000/day",
-    ratingText: "4.5 (120 reviews)",
-    type: "Shared Desk",
-    capacity: "50 People",
-    totalBookings: 10,
-  },
-];
 
 const mockBookings: BookingRow[] = [
   {
@@ -112,6 +57,8 @@ const mockBookings: BookingRow[] = [
 
 export default function ListingsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewEditModalOpen, setIsViewEditModalOpen] = useState(false);
+  const [selectedListingId, setSelectedListingId] = useState<string>("");
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -278,11 +225,23 @@ export default function ListingsPage() {
 
                   {/* Row bottom: actions */}
                   <div className="flex items-center gap-2 flex-wrap">
-                    <button className="flex items-center gap-2 px-3 h-11 border border-[#D1D5DB] rounded-lg text-[#686767]">
+                    <button 
+                      onClick={() => {
+                        setSelectedListingId(l.id);
+                        setIsViewEditModalOpen(true);
+                      }}
+                      className="flex items-center gap-2 px-3 h-11 border border-[#D1D5DB] rounded-lg text-[#686767] hover:border-[#002F5B] hover:text-[#002F5B] transition-colors"
+                    >
                       <Eye className="w-5 h-5" />
                       <span className="text-[16px] font-semibold">View</span>
                     </button>
-                    <button className="flex items-center gap-2 px-3 h-11 border border-[#D1D5DB] rounded-lg text-[#686767]">
+                    <button 
+                      onClick={() => {
+                        setSelectedListingId(l.id);
+                        setIsViewEditModalOpen(true);
+                      }}
+                      className="flex items-center gap-2 px-3 h-11 border border-[#D1D5DB] rounded-lg text-[#686767] hover:border-[#002F5B] hover:text-[#002F5B] transition-colors"
+                    >
                       <Edit className="w-5 h-5" />
                       <span className="text-[16px] font-semibold">Edit</span>
                     </button>
@@ -345,6 +304,18 @@ export default function ListingsPage() {
 
       {/* Add Listing Modal */}
       <AddListingModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+
+      {/* View/Edit Listing Modal */}
+      {selectedListingId && (
+        <ViewEditListingModal 
+          isOpen={isViewEditModalOpen} 
+          onClose={() => {
+            setIsViewEditModalOpen(false);
+            setSelectedListingId("");
+          }}
+          spaceId={selectedListingId}
+        />
+      )}
     </>
   );
 }

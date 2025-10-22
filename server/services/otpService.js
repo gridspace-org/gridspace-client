@@ -1,11 +1,11 @@
-const crypto = require('crypto');
+import crypto from 'crypto';
 
 /**
  * Generate a random OTP (One-Time Password)
  * @param {number} length - Length of the OTP (default: 6)
  * @returns {string} Generated OTP
  */
-const generateOTP = (length = 6) => {
+export const generateOTP = (length = 6) => {
   const digits = '0123456789';
   let otp = '';
   
@@ -22,7 +22,7 @@ const generateOTP = (length = 6) => {
  * @param {number} expiryMinutes - Expiry time in minutes (default: 10)
  * @returns {Object} Object containing OTP, expiry time, and creation time
  */
-const generateSecureOTP = (length = 6, expiryMinutes = 10) => {
+export const generateSecureOTP = (length = 6, expiryMinutes = 10) => {
   const otp = generateOTP(length);
   const createdAt = new Date();
   const expiresAt = new Date(createdAt.getTime() + (expiryMinutes * 60 * 1000));
@@ -42,7 +42,7 @@ const generateSecureOTP = (length = 6, expiryMinutes = 10) => {
  * @param {Date} expiresAt - Expiry time of the OTP
  * @returns {Object} Verification result with success status and message
  */
-const verifyOTP = (providedOTP, storedOTP, expiresAt) => {
+export const verifyOTP = (providedOTP, storedOTP, expiresAt) => {
   // Check if OTP is expired
   if (new Date() > new Date(expiresAt)) {
     return {
@@ -73,7 +73,7 @@ const verifyOTP = (providedOTP, storedOTP, expiresAt) => {
  * @param {Date} expiresAt - Expiry time of the OTP
  * @returns {boolean} True if expired, false otherwise
  */
-const isOTPExpired = (expiresAt) => {
+export const isOTPExpired = (expiresAt) => {
   return new Date() > new Date(expiresAt);
 };
 
@@ -93,7 +93,7 @@ const getRemainingTime = (expiresAt) => {
   return Math.ceil((expiry - now) / (1000 * 60));
 };
 
-module.exports = {
+export default {
   generateOTP,
   generateSecureOTP,
   verifyOTP,

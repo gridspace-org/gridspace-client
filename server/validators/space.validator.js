@@ -46,7 +46,12 @@ export const createSpaceValidation = Joi.object({
       'Networking', 'Presentations', 'Creative Work',
       'Interview', 'Training', 'Client Meeting'
     )
-  ).max(6).optional()
+  ).max(6).optional(),
+  
+  images: Joi.array().items(Joi.string().uri()).max(5).optional().messages({
+    'array.max': 'Cannot upload more than 5 images',
+    'string.uri': 'Image URLs must be valid'
+  })
 });
 
 export const updateSpaceValidation = createSpaceValidation.fork(

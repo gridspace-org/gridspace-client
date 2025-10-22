@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LucideIcon } from "lucide-react";
 
 interface DashboardCardProps {
@@ -5,6 +6,8 @@ interface DashboardCardProps {
   title: string;
   description: string;
   onClick?: () => void;
+  href?: string;
+  disabled?: boolean;
 }
 
 export default function DashboardCard({
@@ -12,11 +15,17 @@ export default function DashboardCard({
   title,
   description,
   onClick,
+  href,
+  disabled,
 }: DashboardCardProps) {
-  return (
+  const content = (
     <div
-      className="flex flex-col items-center justify-center p-[10px] gap-3 h-[171px] bg-white border-[0.5px] border-[#D1D5DB] rounded-xl shadow-[0px_4px_4px_rgba(222,222,222,0.25)] cursor-pointer hover:shadow-[0px_6px_6px_rgba(222,222,222,0.35)] transition-shadow"
-      onClick={onClick}
+      className={`flex flex-col items-center justify-center p-[10px] gap-3 h-[171px] bg-white border-[0.5px] border-[#D1D5DB] rounded-xl shadow-[0px_4px_4px_rgba(222,222,222,0.25)] transition-shadow ${
+        disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-[0px_6px_6px_rgba(222,222,222,0.35)]'
+      }`}
+      onClick={disabled ? undefined : onClick}
+      aria-disabled={disabled ? true : undefined}
+      tabIndex={disabled ? -1 : 0}
     >
       <Icon className="w-10 h-10 text-[#002F5B]" />
       <div className="flex flex-col items-center gap-2">
@@ -29,4 +38,14 @@ export default function DashboardCard({
       </div>
     </div>
   );
+
+  if (href && !disabled) {
+    return (
+      <Link href={href} aria-label={title}>
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }

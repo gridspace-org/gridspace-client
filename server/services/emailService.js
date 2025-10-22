@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
 class EmailService {
   constructor() {
@@ -411,4 +411,4 @@ This email was sent by GridSpace. If you didn't request a password reset, please
   }
 }
 
-module.exports = new EmailService();
+export default new EmailService();

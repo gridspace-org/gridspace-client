@@ -44,15 +44,17 @@ const spaceSchema = new mongoose.Schema({
   },
 
   // ===== MEDIA =====
-  images: [{
-    type: String, // Cloudinary URLs
+  images: {
+    type: [String], // Cloudinary URLs
     validate: {
-      validator: function(images) {
-        return images.length <= 5;
+      validator: function(arr) {
+        // allow empty array or up to 5 images
+        return !arr || arr.length <= 5;
       },
       message: "Cannot upload more than 5 images"
-    }
-  }],
+    },
+    default: []
+  },
 
   // ===== AMENITIES AND PURPOSES =====
   amenities: [{
