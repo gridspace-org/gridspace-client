@@ -80,7 +80,7 @@ class SpacesApiService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://gridspace-skaw.onrender.com/api';
   }
 
   private async getAuthToken(): Promise<string | null> {
