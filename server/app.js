@@ -3,10 +3,10 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
-import healthcheck from 'express-healthcheck';
+// import healthcheck from 'express-healthcheck';
 import logger from './config/logger.js';
-import { swaggerSpec, swaggerUiOptions } from './config/swagger.js';
-import swaggerUi from 'swagger-ui-express';
+// import { swaggerSpec, swaggerUiOptions } from './config/swagger.js';
+// import swaggerUi from 'swagger-ui-express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -125,7 +125,7 @@ app.use(helmet({
 // Enhanced CORS configuration with security
 const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || [
   'http://localhost:3000', // development default
-  'http://localhost:3001', // common dev ports
+  'https://work.gridspace.com.ng', // common dev ports
 ];
 
 const corsOptions = {
@@ -172,13 +172,13 @@ app.use(cors(corsOptions));
 app.use(sanitizeInput);
 
 // Interactive API Documentation (Swagger UI)
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
+// app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
 
-// Swagger JSON specification endpoint
-app.get('/api-docs.json', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.send(swaggerSpec);
-});
+// // Swagger JSON specification endpoint
+// app.get('/api-docs.json', (req, res) => {
+//   res.setHeader('Content-Type', 'application/json');
+//   res.send(swaggerSpec);
+// });
 
 app.use("/api/auth", authRoutes);
 app.use('/api/spaces', spaceRoutes);
