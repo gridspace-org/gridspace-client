@@ -11,8 +11,15 @@ The Booking API enables users to create, manage, and track space bookings, while
 All endpoints require JWT authentication in the `Authorization` header. Some endpoints require specific user roles (host, admin).
 
 ```
+Local:        http://localhost:5000
+Production:   https://grid-production-cb89.up.railway.app
+```
+
+```
 Authorization: Bearer <jwt_token>
 ```
+
+Moderator-only flows (suspensions, approvals) are detailed in `doc/admin-implementation/ADMIN_API_DOCUMENTATION.md`.
 
 ---
 

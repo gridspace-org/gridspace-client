@@ -3,7 +3,8 @@
 ## Base URL
 
 ```
-http://localhost:5000/api/auth
+Local:        http://localhost:5000/api/auth
+Production:   https://grid-production-cb89.up.railway.app/api/auth
 ```
 
 ## Authentication
@@ -13,6 +14,8 @@ Most endpoints require authentication via JWT token in the Authorization header:
 ```
 Authorization: Bearer <your-jwt-token>
 ```
+
+Need moderator access? Authenticate as the seeded admin and refer to `doc/admin-implementation/ADMIN_API_DOCUMENTATION.md` (local only) for mutation workflows.
 
 ## Endpoints
 

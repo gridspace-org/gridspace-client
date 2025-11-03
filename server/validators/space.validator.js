@@ -47,6 +47,14 @@ export const createSpaceValidation = Joi.object({
       'Interview', 'Training', 'Client Meeting'
     )
   ).max(6).optional(),
+
+  timeSlots: Joi.array().items(
+    Joi.object({
+      day: Joi.string().valid('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday').required(),
+      startTime: Joi.string().pattern(/^([01]\\d|2[0-3]):([0-5]\\d)$/).required(),
+      endTime: Joi.string().pattern(/^([01]\\d|2[0-3]):([0-5]\\d)$/).required()
+    })
+  ).min(1).optional(),
   
   images: Joi.array().items(Joi.string().uri()).max(5).optional().messages({
     'array.max': 'Cannot upload more than 5 images',

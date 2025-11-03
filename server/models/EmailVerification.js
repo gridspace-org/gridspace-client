@@ -35,6 +35,5 @@ const emailVerificationSchema = new mongoose.Schema({
 
 // Index for efficient queries
 emailVerificationSchema.index({ email: 1, otp: 1 });
-emailVerificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export default mongoose.model("EmailVerification", emailVerificationSchema);

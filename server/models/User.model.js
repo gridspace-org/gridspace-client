@@ -13,7 +13,7 @@ const userSchema = new mongoose.Schema({
       return this.authProvider !== 'google'; // Only required for local users
     },
     unique: true,
-    sparse: true, // Allows multiple null values for OAuth users
+    sparse: true,
     trim: true,
   },
   email: {
@@ -45,6 +45,10 @@ const userSchema = new mongoose.Schema({
     enum: ["user", "host", "admin"],
     default: "user",
   },
+  permissions: {
+    type: [String],
+    default: [],
+  },
   profilePic: {
     type: String,
     default: null,
@@ -66,6 +70,43 @@ const userSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true,
+  },
+  suspension: {
+    isSuspended: {
+      type: Boolean,
+      default: false,
+    },
+    reason: {
+      type: String,
+      enum: [
+        "fraud",
+        "policy_violation",
+        "chargeback_dispute",
+        "abuse",
+        "other",
+        null,
+      ],
+      default: null,
+    },
+    details: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: null,
+    },
+    suspendedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    suspendedAt: {
+      type: Date,
+      default: null,
+    },
+    resumeAt: {
+      type: Date,
+      default: null,
+    },
   },
   location: {
     type: String,

@@ -88,6 +88,10 @@ import reportRoutes from './routes/reportsRoute.js';
 
 const app = express();
 
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI, {

@@ -3,7 +3,7 @@ import logger from './config/logger.js';
 import { executeBackupRoutine } from './config/backup.js';
 import cron from 'node-cron';
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5002;
 
 // Create server instance and make it available to app.js graceful shutdown
 const server = app.listen(PORT, () => {

@@ -82,10 +82,52 @@ const spaceSchema = new mongoose.Schema({
     max: [100, "Capacity cannot exceed 100 people"]
   },
 
+  // ===== AVAILABILITY =====
+  timeSlots: [{
+    day: {
+      type: String,
+      required: true,
+      enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    },
+    startTime: {
+      type: String,
+      required: true,
+      match: /^([01]\\d|2[0-3]):([0-5]\\d)$/ // HH:MM format
+    },
+    endTime: {
+      type: String,
+      required: true,
+      match: /^([01]\\d|2[0-3]):([0-5]\\d)$/ // HH:MM format
+    }
+  }],
+
   // ===== STATUS =====
   isActive: {
     type: Boolean,
     default: true // Soft delete flag
+  },
+  status: {
+    type: String,
+    enum: ["pending", "approved", "rejected"],
+    default: "pending",
+    index: true,
+  },
+  moderation: {
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    reviewedAt: {
+      type: Date,
+      default: null,
+    },
+    reason: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: null,
+    },
   },
 }, {
   timestamps: true // Auto-manages createdAt and updatedAt
