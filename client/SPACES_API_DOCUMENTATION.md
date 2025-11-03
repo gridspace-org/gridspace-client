@@ -14,6 +14,15 @@ All protected endpoints require JWT authentication in the `Authorization` header
 Authorization: Bearer <jwt_token>
 ```
 
+## ⚙️ Base URL
+
+```
+Local:        http://localhost:5000
+Production:   https://grid-production-cb89.up.railway.app
+```
+
+For space moderation endpoints (approve/reject), consult `doc/admin-implementation/ADMIN_API_DOCUMENTATION.md`.
+
 ---
 
 ## 📚 API Endpoints
