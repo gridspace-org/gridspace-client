@@ -275,7 +275,4 @@ curl -X POST "https://<base-url>/api/admin/spaces/SPACE_ID/approve" \
 
 ---
 
-## 📈 Next Steps
-- Add automated Jest integration tests covering success and failure flows.
-- Extend documentation with booking-intervention endpoints once implemented.
-- Share this document with the admin dashboard team alongside sample Postman collection.
+
