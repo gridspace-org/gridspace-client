@@ -597,12 +597,6 @@ Authorization: Bearer <jwt-token>
 
 ```json
 {
-  "success": true,
-  "message": "Password changed successfully"
-}
-```
-
-### 10. Request Password Reset
 
 **POST** `/request-password-reset`
 
@@ -616,15 +610,73 @@ Request a password reset token.
 }
 ```
 
+**Example Request:**
+```bash
+curl -X POST "https://grid-production-cb89.up.railway.app/api/v1/auth/request-password-reset" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com"}'
+```
+
 **Response:**
 
 ```json
 {
   "success": true,
-  "message": "Password reset token generated",
-  "resetToken": "reset-token-here"
+  "message": "Password reset email sent to your email address"
 }
 ```
+
+#### 2. Check Email for Reset Link
+
+- Look for an email with subject "Password Reset Request"
+- **Important**: The email contains a link with a `token` parameter
+- The token is a long string in the format: `?token=abc123...`
+
+#### 3. Reset Password (Using Token from Email)
+
+**POST** `/reset-password`
+
+Reset password using the token from the reset link.
+
+**Request Body:**
+
+```json
+{
+  "email": "john@example.com",
+  "token": "YOUR_RESET_TOKEN_FROM_EMAIL",
+  "newPassword": "NewSecurePassword123!"
+}
+```
+
+**Example Request:**
+```bash
+curl -X POST "https://grid-production-cb89.up.railway.app/api/v1/auth/reset-password" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "token": "YOUR_RESET_TOKEN_FROM_EMAIL",
+    "newPassword": "NewSecurePassword123!"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Password reset successfully"
+}
+```
+
+**Notes:**
+
+- The token is valid for 1 hour
+- Password must be at least 8 characters with:
+  - Uppercase letter
+  - Lowercase letter
+  - Number
+  - Special character
+- After successful reset, all active sessions will be invalidated
 
 ### 11. Reset Password
 
