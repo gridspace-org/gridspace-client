@@ -16,14 +16,17 @@ const requiredEnvVars = [
 const optionalEnvVars = {
   NODE_ENV: 'development',
   PORT: 5000,
-  CORS_ORIGIN: 'http://localhost:3000,http://localhost:3001',
+  CORS_ORIGIN: 'https://work.gridspace.com.ng,http://localhost:3000,http://localhost:3001',
+  FRONTEND_URL: 'https://work.gridspace.com.ng',
   // Token configuration
   ACCESS_TOKEN_EXPIRES: '15m',        // 15 minutes
   REFRESH_TOKEN_EXPIRES: '7d',        // 7 days
   JWT_ISSUER: 'gridspace-backend',    // Token issuer
   JWT_AUDIENCE: 'gridspace-client',   // Token audience
   // API configuration
-  API_URL: 'http://localhost:5000',   // Base URL for API calls
+  API_URL: process.env.NODE_ENV === 'production' 
+    ? 'https://api.gridspace.com.ng' 
+    : 'http://localhost:5000',   // Base URL for API calls
   // Security
   RATE_LIMIT_WINDOW_MS: '15 * 60 * 1000', // 15 minutes
   RATE_LIMIT_MAX: '100',              // 100 requests per window

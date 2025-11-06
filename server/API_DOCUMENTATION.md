@@ -18,7 +18,7 @@
 
 ```
 Development:  http://localhost:5000/api/v1
-Production:   https://api.gridspace.com/api/v1
+Production:   https://api.gridspace.com.ng/api/v1
 ```
 
 ## Authentication
@@ -88,11 +88,11 @@ For browser-based clients, the refresh process is handled automatically by the `
 
 ## Rate Limiting
 
-| Endpoint                     | Limit          | Window    |
-|------------------------------|----------------|-----------|
-| Authentication Endpoints     | 5 requests     | 15 minutes|
-| API Endpoints                | 100 requests   | 15 minutes|
-| Public Endpoints             | 200 requests   | 1 hour    |
+| Endpoint Type        | Limit      | Window    |
+|----------------------|------------|-----------|
+| Authentication       | 5 requests | 15 minutes|
+| API Endpoints        | 100 requests| 15 minutes|
+| Public Endpoints     | 200 requests| 1 hour   |
 
 ## Error Handling
 

@@ -48,20 +48,27 @@ const securityHeaders = {
 };
 
 // CORS configuration
-const corsConfig = (allowedOrigins) => ({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  maxAge: 86400, // 24 hours
-});
+const corsConfig = (allowedOrigins) => {
+  const origins = typeof allowedOrigins === 'string' 
+    ? allowedOrigins.split(',').map(origin => origin.trim())
+    : [];
+  
+  return {
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      if (origins.includes(origin) || origins.includes('*')) {
+        return callback(null, true);
+      }
+      return callback(new Error(`Not allowed by CORS. Origin: ${origin}, Allowed: ${origins.join(', ')}`));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Range', 'X-Total-Count'],
+    maxAge: 86400, // 24 hours
+  };
+};
 
 // Health check configuration
 const healthCheckConfig = {
