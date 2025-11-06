@@ -1,5 +1,5 @@
 import Booking from '../models/Booking.model.js';
-import logger from '../config/logger.js';
+import { logger } from '../config/logger.js';
 
 /**
  * Check for booking time conflicts using O(log n) compound index queries

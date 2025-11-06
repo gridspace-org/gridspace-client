@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import "dotenv/config";
 
-import logger from "../config/logger.js";
+import { logger } from "../config/logger.js";
 import User from "../models/User.model.js";
 
 const requiredEnv = ["ADMIN_EMAIL", "ADMIN_PASSWORD", "ADMIN_PHONE"];

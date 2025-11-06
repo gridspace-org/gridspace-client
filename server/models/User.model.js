@@ -45,6 +45,22 @@ const userSchema = new mongoose.Schema({
     enum: ["user", "host", "admin"],
     default: "user",
   },
+  refreshTokens: [{
+    token: {
+      type: String,
+      required: true
+    },
+    expiresAt: {
+      type: Date,
+      required: true
+    },
+    userAgent: String,
+    ipAddress: String,
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   permissions: {
     type: [String],
     default: [],

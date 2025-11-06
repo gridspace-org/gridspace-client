@@ -2,9 +2,15 @@ module.exports = {
   testEnvironment: 'node',
   setupFilesAfterEnv: ['<rootDir>/tests/setup.cjs'],
   testMatch: ['**/tests/**/*.test.js'],
+  moduleNameMapper: {
+    '^(\.{1,2}/.*)\.js$': '$1',
+  },
+  transform: {
+    '^.+\\.js$': 'babel-jest',
+  },
   collectCoverageFrom: [
     'controllers/**/*.js',
-    'models/***.js',
+    'models/**/*.js',
     'middleware/**/*.js',
     '!**/node_modules/**'
   ],

@@ -1,7 +1,7 @@
 import Space from '../models/Space.model.js';
 import Booking from '../models/Booking.model.js';
 import Review from '../models/Review.model.js';
-import logger from '../config/logger.js';
+import { logger } from '../config/logger.js';
 
 /**
  * Verify user owns the space they're trying to modify

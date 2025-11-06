@@ -2,7 +2,7 @@ import Space from '../models/Space.model.js';
 import Booking from '../models/Booking.model.js';
 import User from '../models/User.model.js';
 import Review from '../models/Review.model.js';
-import logger from '../config/logger.js';
+import { logger } from '../config/logger.js';
 
 /**
  * Verify space exists and is active

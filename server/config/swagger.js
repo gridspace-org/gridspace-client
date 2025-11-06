@@ -21,9 +21,15 @@ const swaggerOptions = {
     servers: [
       {
         url: process.env.NODE_ENV === 'production'
-          ? process.env.PRODUCTION_URL || 'https://api.gridspace.com'
-          : `http://localhost:${process.env.PORT || 5000}`,
-        description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server'
+          ? `${process.env.PRODUCTION_URL || 'https://api.gridspace.com'}/api/v1`
+          : `http://localhost:${process.env.PORT || 5000}/api/v1`,
+        description: process.env.NODE_ENV === 'production' ? 'Production API v1' : 'Development API v1',
+        variables: {
+          basePath: {
+            default: '/api/v1',
+            description: 'API base path',
+          }
+        }
       }
     ],
     components: {

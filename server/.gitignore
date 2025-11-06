@@ -18,3 +18,4 @@ bugfix_plan.md
 production-requirements.md
 README.local.md
 node_modules
+.env

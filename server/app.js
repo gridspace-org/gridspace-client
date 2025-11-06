@@ -5,56 +5,32 @@ import cors from 'cors';
 import helmet from 'helmet';
 import healthcheck from 'express-healthcheck';
 import logger from './config/logger.js';
+import env from './config/env.js';
 import { swaggerSpec, swaggerUiOptions } from './config/swagger.js';
 import swaggerUi from 'swagger-ui-express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cookieParser from 'cookie-parser';
+import { checkPasswordComplexity } from 'check-password-complexity';
+import sanitizeRequest from './middleware/sanitize.js';
+import { errorConverter, errorHandler } from './middleware/errorHandler.js';
+import { 
+  passwordComplexity, 
+  requestLimits, 
+  securityHeaders, 
+  corsConfig,
+  healthCheckConfig 
+} from './config/security.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Input sanitization utility
-const sanitizeInput = (req, res, next) => {
-  // Sanitize query parameters
-  for (const key in req.query) {
-    if (typeof req.query[key] === 'string') {
-      // Basic HTML entity encoding to prevent XSS
-      req.query[key] = req.query[key].replace(/[&<>"']/g, (char) => {
-        return {
-          '&': '&',
-          '<': '<',
-          '>': '>',
-          '"': '"',
-          "'": '&#39;'
-        }[char];
-      });
-    }
-  }
-
-  // Sanitize body parameters (basic XSS prevention)
-  if (req.body && typeof req.body === 'object') {
-    for (const key in req.body) {
-      if (typeof req.body[key] === 'string') {
-        // Basic HTML entity encoding
-        req.body[key] = req.body[key].replace(/[&<>"']/g, (char) => {
-          return {
-            '&': '&',
-            '<': '<',
-            '>': '>',
-            '"': '"',
-            "'": '&#39;'
-          }[char];
-        });
-      }
-    }
-  }
-
-  // Audit logging for security events
+const auditLoginAttempts = (req, res, next) => {
   if (req.method !== 'GET' && req.originalUrl.includes('/auth/signin')) {
     logger.info('[SECURITY] Login attempt', {
       ip: req.ip,
       userAgent: req.get('User-Agent'),
-      email: req.body?.email?.substring(0, 50), // Limit logged data
+      email: req.body?.email?.substring(0, 50),
       timestamp: new Date()
     });
   }
@@ -62,28 +38,18 @@ const sanitizeInput = (req, res, next) => {
   next();
 };
 
-// Environment variable validation
-const requiredEnvVars = [
-  'MONGO_URI',
-  'JWT_SECRET',
-  'CLOUDINARY_CLOUD_NAME',
-  'CLOUDINARY_API_KEY',
-  'CLOUDINARY_API_SECRET'
-];
+// Environment variables are now managed in config/env.js
 
-for (const envVar of requiredEnvVars) {
-  if (!process.env[envVar]) {
-    logger.error(`Missing required environment variable: ${envVar}`);
-    process.exit(1);
-  }
+// Validate JWT secret strength
+const complexity = checkPasswordComplexity(process.env.JWT_SECRET || '', passwordComplexity);
+
+if (complexity.value === 'tooWeak' || complexity.value === 'weak') {
+  logger.error('JWT_SECRET is not strong enough. Please provide a stronger secret.');
+  process.exit(1);
 }
 
 // routes
-import authRoutes from './routes/auth.js';
-import spaceRoutes from './routes/space.route.js';
-import bookingRoutes from './routes/bookingsRoute.js';
-import adminRoutes from './routes/adminRoute.js';
-import reportRoutes from './routes/reportsRoute.js';
+import v1Routes from './routes/index.js';
 
 
 const app = express();
@@ -92,62 +58,39 @@ if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 
-const connectDB = async () => {
+export const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      // // Current Mongoose options (v8+)
-      // maxPoolSize: 10, // Maximum connection pool size
-      // serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-      // socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
-      // // Security options
-      // ssl: process.env.NODE_ENV === 'production', // Use SSL in production
-      // // Performance monitoring
-      // monitorCommands: process.env.NODE_ENV === 'development'
-    });
-    logger.info("Connected to MongoDB successfully");
+    // Connect to MongoDB
+    mongoose
+      .connect(env.mongoUri, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      })
+      .then(() => {
+        logger.info("Connected to MongoDB successfully");
+      })
+      .catch((error) => {
+        logger.error("MongoDB connection error:", error);
+        process.exit(1);
+      });
   } catch (error) {
     logger.error("MongoDB connection error:", error);
     process.exit(1);
   }
 };
 
-connectDB();
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"], // Adjust based on needs
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-    },
-  },
-}));
 
-// Enhanced CORS configuration with security
-const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || [
-  'http://localhost:3000', // development default
-  'http://localhost:3001', // common dev ports
-];
+// Apply request parsing with limits
+app.use(express.json(requestLimits.json));
+app.use(express.urlencoded(requestLimits.urlencoded));
+app.use(cookieParser());
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+// Apply security headers
+app.use(helmet(securityHeaders));
 
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  maxAge: 86400 // 24 hours
-};
+// Apply CORS configuration
+const corsOptions = corsConfig(env.corsOrigins);
 
 // Health check endpoint for load balancers and monitoring
 const getHealthCheck = () => ({
@@ -159,13 +102,14 @@ const getHealthCheck = () => ({
     state: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     name: mongoose.connection.name
   },
-  version: process.env.npm_package_version || '1.0.0',
-  environment: process.env.NODE_ENV || 'development'
+  ...healthCheckConfig.info
 });
 
 app.get('/health', (req, res) => {
   const health = getHealthCheck();
-  const isHealthy = health.database.state === 'connected' && health.memory.heapUsed < 500 * 1024 * 1024; // < 500MB
+  const isHealthy = 
+    health.database.state === 'connected' && 
+    health.memory.heapUsed < healthCheckConfig.memoryThreshold;
 
   res.status(isHealthy ? 200 : 503).json(health);
 });
@@ -173,7 +117,8 @@ app.get('/health', (req, res) => {
 app.use(cors(corsOptions));
 
 // Input sanitization middleware (must be after JSON parsing)
-app.use(sanitizeInput);
+app.use(sanitizeRequest);
+app.use(auditLoginAttempts);
 
 // Interactive API Documentation (Swagger UI)
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
@@ -184,11 +129,10 @@ app.get('/api-docs.json', (req, res) => {
   res.send(swaggerSpec);
 });
 
-app.use("/api/auth", authRoutes);
-app.use('/api/spaces', spaceRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/reports', reportRoutes);
+app.use('/api/v1', v1Routes);
+
+app.use(errorConverter);
+app.use(errorHandler);
 
 // Graceful shutdown handling - server instance provided by server.js
 const gracefulShutdown = async (signal) => {

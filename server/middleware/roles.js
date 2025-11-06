@@ -1,4 +1,4 @@
-import logger from "../config/logger.js";
+import { logger } from "../config/logger.js";
 import { authenticate } from "./auth.js";
 
 export const requireRole = (...roles) => {
