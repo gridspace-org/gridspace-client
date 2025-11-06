@@ -6,6 +6,7 @@
 - [Token Refresh](#token-refresh)
 - [Rate Limiting](#rate-limiting)
 - [Error Handling](#error-handling)
+- [Cookies](#cookies)
 - [Endpoints](#endpoints)
   - [Authentication](#authentication-1)
   - [Profile](#profile)
@@ -25,11 +26,13 @@ Production:   https://api.gridspace.com/api/v1
 ### Access Token
 - **Lifetime**: 15 minutes
 - **Storage**: HTTP-only cookie
+- **Path**: `/`
 - **Required for**: All protected routes
 
 ### Refresh Token
 - **Lifetime**: 7 days
 - **Storage**: HTTP-only cookie
+- **Path**: `/api/v1/auth/refresh-token`
 - **Used for**: Obtaining new access tokens
 
 ### Request Headers
@@ -40,13 +43,45 @@ For API clients that can't use cookies, include the access token in the Authoriz
 Authorization: Bearer <access-token>
 ```
 
+## Cookies
+
+The API uses HTTP-only cookies for secure token storage:
+
+| Cookie Name   | Description          | Path                      | Max Age  | HTTP Only | Secure | SameSite |
+|---------------|----------------------|---------------------------|----------|-----------|--------|----------|
+| accessToken   | JWT access token     | /                         | 15m      | Yes       | Yes*   | Strict   |
+| refreshToken  | Refresh token        | /api/v1/auth/refresh-token| 7d       | Yes       | Yes*   | Strict   |
+
+*Secure flag is enabled in production only
+
 ## Token Refresh
 
-When an access token expires, the client should:
+When an access token expires:
 
-1. Make a POST request to `/auth/refresh-token`
-2. The server will return a new access token
-3. Update the Authorization header with the new token
+1. The client should make a POST request to `/api/v1/auth/refresh-token`
+2. The request must include the refresh token in an HTTP-only cookie
+3. The server will respond with:
+   - A new access token in the response body
+   - A new refresh token in an HTTP-only cookie
+   - Both tokens in the response headers (for non-browser clients)
+
+**Example Request:**
+```
+POST /api/v1/auth/refresh-token
+Cookie: refreshToken=<refresh-token>
+```
+
+**Example Response:**
+```json
+{
+  "success": true,
+  "message": "Token refreshed successfully",
+  "data": {
+    "accessToken": "new-access-token",
+    "expiresIn": 900
+  }
+}
+```
 
 ### Automatic Refresh
 For browser-based clients, the refresh process is handled automatically by the `refreshIfNeeded` middleware.

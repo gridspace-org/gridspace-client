@@ -8,11 +8,27 @@ The Space API allows hosts to create, manage, and list workspace spaces, while e
 
 ## 🔐 Authentication
 
-All protected endpoints require JWT authentication in the `Authorization` header.
+All protected endpoints require authentication. The API supports two authentication methods:
 
+### 1. HTTP-Only Cookies (Recommended for Browsers)
+- Access token is automatically sent with each request via HTTP-only cookie
+- Refresh token is used to obtain new access tokens when they expire
+
+### 2. Bearer Token (For API Clients)
 ```
-Authorization: Bearer <jwt_token>
+Authorization: Bearer <access-token>
 ```
+
+### Required Headers
+```
+Content-Type: application/json
+Accept: application/json
+```
+
+### Token Refresh
+When the access token expires (after 15 minutes), clients should:
+1. Make a POST request to `/api/v1/auth/refresh-token` with the refresh token cookie
+2. The server will return a new access token and refresh token
 
 ---
 
