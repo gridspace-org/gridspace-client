@@ -22,12 +22,13 @@ The Booking API enables users to create, manage, and track space bookings, while
 ```
 Content-Type: application/json
 Accept: application/json
+Authorization: Bearer <token>  # For protected routes
 ```
 
 ### Base URLs
 ```
-Development:  http://localhost:5000/api/v1
-Production:   https://api.gridspace.com/api/v1
+Development:  http://localhost:5002/api/v1
+Production:   https://grid-production-cb89.up.railway.app/api/v1
 ```
 
 ### Token Refresh

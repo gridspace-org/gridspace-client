@@ -23,6 +23,7 @@ Authorization: Bearer <access-token>
 ```
 Content-Type: application/json
 Accept: application/json
+Authorization: Bearer <token>  # For protected routes
 ```
 
 ### Token Refresh
@@ -179,7 +180,7 @@ GET /api/spaces/68e3ba50af4d71f165d30511
 #### JSON Reference (for implementing UI forms)
 
 ```bash
-curl -X POST https://grid-production-cb89.up.railway.app/api/spaces \
+curl -X POST https://grid-production-cb89.up.railway.app/api/v1/spaces \
   -H "Authorization: Bearer <host_jwt_token>" \
   -F "title=Premium Co-working Space" \
   -F "description=A beautiful co-working space..." \

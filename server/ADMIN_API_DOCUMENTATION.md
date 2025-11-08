@@ -23,6 +23,13 @@ Include the token in every request:
 ```
 Authorization: Bearer <jwt_token>
 Content-Type: application/json
+Accept: application/json
+```
+
+### Base URLs
+```
+Development:  http://localhost:5002/api/v1
+Production:   https://grid-production-cb89.up.railway.app/api/v1
 ```
 
 ---
