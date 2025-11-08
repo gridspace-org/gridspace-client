@@ -49,9 +49,13 @@ const securityHeaders = {
 
 // CORS configuration
 const corsConfig = (allowedOrigins) => {
-  const origins = typeof allowedOrigins === 'string' 
-    ? allowedOrigins.split(',').map(origin => origin.trim())
-    : [];
+  let origins = [];
+
+  if (typeof allowedOrigins === 'string') {
+    origins = allowedOrigins.split(',').map(origin => origin.trim());
+  } else if (Array.isArray(allowedOrigins)) {
+    origins = allowedOrigins.map(origin => origin.trim());
+  }
   
   return {
     origin: (origin, callback) => {

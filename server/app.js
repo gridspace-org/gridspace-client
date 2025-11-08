@@ -60,19 +60,27 @@ if (process.env.NODE_ENV === 'production') {
 
 export const connectDB = async () => {
   try {
-    // Connect to MongoDB
-    mongoose
-      .connect(env.mongoUri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      })
-      .then(() => {
+    // Connect to MongoDB with retry logic
+    const maxRetries = 5;
+    let retryCount = 0;
+    
+    const connectWithRetry = async () => {
+      try {
+        await mongoose.connect(env.mongoUri);
         logger.info("Connected to MongoDB successfully");
-      })
-      .catch((error) => {
-        logger.error("MongoDB connection error:", error);
-        process.exit(1);
-      });
+      } catch (error) {
+        retryCount++;
+        if (retryCount < maxRetries) {
+          logger.warn(`MongoDB connection attempt ${retryCount} failed, retrying in 5 seconds...`);
+          setTimeout(connectWithRetry, 5000);
+        } else {
+          logger.error("MongoDB connection failed after retries:", error);
+          process.exit(1);
+        }
+      }
+    };
+
+    await connectWithRetry();
   } catch (error) {
     logger.error("MongoDB connection error:", error);
     process.exit(1);

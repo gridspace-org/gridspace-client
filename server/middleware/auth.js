@@ -51,6 +51,9 @@ const protectMiddleware = async (req, res, next) => {
     res.locals.user = currentUser;
     next();
   } catch (error) {
+    if (error instanceof AppError) {
+      return next(error);
+    }
     // Handle token expiration specifically
     if (error.name === 'TokenExpiredError') {
       return next(new AppError('Your token has expired! Please log in again.', 401));
@@ -65,7 +68,6 @@ const protectMiddleware = async (req, res, next) => {
     logger.error(`Authentication error: ${error.message}`, { error });
     return next(new AppError('Authentication failed. Please try again later.', 500));
   }
-  next();
 };
 
 export const protect = asyncHandler(protectMiddleware);

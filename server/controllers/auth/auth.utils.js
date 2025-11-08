@@ -23,7 +23,7 @@ const TOKEN_CONFIG = {
  * Generate a JWT token
  */
 export const generateToken = (userId, tokenType = 'access') => {
-  const { expiresIn, type, ...options } = TOKEN_CONFIG[tokenType] || TOKEN_CONFIG.access;
+  const { expiresIn, type } = TOKEN_CONFIG[tokenType] || TOKEN_CONFIG.access;
   
   return jwt.sign(
     {
@@ -33,8 +33,9 @@ export const generateToken = (userId, tokenType = 'access') => {
     },
     process.env.JWT_SECRET,
     {
-      ...options,
-      expiresIn
+      expiresIn,
+      issuer: TOKEN_CONFIG.issuer,
+      audience: TOKEN_CONFIG.audience
     }
   );
 };
@@ -52,9 +53,13 @@ export const generateRefreshToken = () => ({
  */
 export const verifyToken = (token) => {
   try {
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is not defined');
+    }
     return jwt.verify(token, process.env.JWT_SECRET, {
       issuer: TOKEN_CONFIG.issuer,
-      audience: TOKEN_CONFIG.audience
+      audience: TOKEN_CONFIG.audience,
+      ignoreExpiration: false
     });
   } catch (error) {
     logger.error(`Token verification failed: ${error.message}`, { error });

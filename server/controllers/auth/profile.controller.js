@@ -102,50 +102,60 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
     throw new AppError('Authentication required', 401);
   }
 
-  const { role, purposes, location } = req.body;
-
+  const { role, bio, company, phoneNumber, location } = req.body;
+  
+  // Basic validation
   if (!role) {
     throw new AppError('Role is required for onboarding', 400);
   }
 
-  const validRoles = ['user', 'host', 'admin'];
+  const validRoles = ['user', 'host'];
   if (!validRoles.includes(role)) {
-    throw new AppError('Invalid role. Must be one of: user, host, admin', 400);
+    throw new AppError('Invalid role. Must be one of: user, host', 400);
   }
 
-  let parsedPurposes = [];
-  if (purposes) {
-    try {
-      parsedPurposes = typeof purposes === 'string' ? JSON.parse(purposes) : purposes;
-      if (!Array.isArray(parsedPurposes)) {
-        parsedPurposes = [];
-      }
-    } catch (error) {
-      throw new AppError('Invalid purposes format. Must be a valid JSON array', 400);
+  // Host-specific validations
+  if (role === 'host') {
+    if (!bio || !location || !phoneNumber) {
+      throw new AppError('Bio, location, and phone number are required for host onboarding', 400);
     }
   }
 
+  // Prepare update data
   const updateData = {
     role: role.trim(),
     onboardingCompleted: true,
-    purposes: parsedPurposes,
+    ...(bio && { bio: bio.trim() }),
+    ...(company && { company: company.trim() }),
+    ...(phoneNumber && { phoneNumber: phoneNumber.trim() }),
+    ...(location && { location: location.trim() })
   };
 
-  if (location) {
-    updateData.location = location.trim();
-  }
-
+  // Handle profile picture upload if provided
   if (req.file) {
-    updateData.profilePic = await uploadProfileImage(req.file);
+    try {
+      updateData.profilePic = await uploadProfileImage(req.file);
+    } catch (error) {
+      logger.error('Error uploading profile picture:', error);
+      throw new AppError('Failed to upload profile picture', 500);
+    }
   }
 
-  const updatedUser = await User.findByIdAndUpdate(req.user._id, updateData, {
-    new: true,
-    runValidators: true,
-  }).select('-password');
+  // Update user
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user._id,
+    updateData,
+    { new: true, runValidators: true }
+  ).select('-password');
 
   if (!updatedUser) {
     throw new AppError('User not found', 404);
+  }
+
+  // If this is a host, we might want to create a default host profile
+  if (role === 'host') {
+    // Here you could add logic to create/update a host profile
+    // For example: await createOrUpdateHostProfile(updatedUser._id, { bio, company });
   }
 
   res.status(200).json({

@@ -129,15 +129,25 @@ For browser-based clients, the refresh process is handled automatically by the `
 
 Register a new user account.
 
-**Request Body:**
+**Request Body (multipart/form-data):**
 
-```json
-{
-  "fullname": "John Doe",
-  "email": "john@example.com",
-  "password": "password123",
-  "phonenumber": "+1234567890"
-}
+| Field       | Type   | Required | Description                          |
+|-------------|--------|----------|--------------------------------------|
+| fullname    | string | Yes      | User's full name                     |
+| email       | string | Yes      | User's email address (must be unique)|
+| password    | string | Yes      | Password (min 6 characters)          |
+| phonenumber | string | Yes      | User's phone number (must be unique) |
+| profilePic  | file   | No       | Optional profile picture             |
+
+**Example Request:**
+
+```bash
+curl -X POST "http://localhost:5002/api/v1/auth/signup" \
+  -F "fullname=John Doe" \
+  -F "email=john@example.com" \
+  -F "password=password123" \
+  -F "phonenumber=+1234567890" \
+  -F "profilePic=@/path/to/avatar.jpg"
 ```
 
 **Form Data:**

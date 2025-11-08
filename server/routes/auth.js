@@ -81,20 +81,27 @@ const gentleAuthLimiter = rateLimit({
  *               - fullname
  *               - email
  *               - password
+ *               - phonenumber
  *             properties:
  *               fullname:
  *                 type: string
+ *                 description: User's full name
  *               email:
  *                 type: string
  *                 format: email
+ *                 description: User's email address (must be unique)
  *               password:
  *                 type: string
  *                 format: password
+ *                 minLength: 6
+ *                 description: Password must be at least 6 characters
  *               phonenumber:
  *                 type: string
+ *                 description: User's phone number (must be unique)
  *               profilePic:
  *                 type: string
  *                 format: binary
+ *                 description: Optional profile picture
  *     responses:
  *       201:
  *         description: User created successfully
@@ -409,7 +416,7 @@ router.put("/profile", authenticate, upload.single("profilePic"), validate(updat
 
 /**
  * @swagger
- * /api/v1/auth/complete-onboarding:
+ * /api/v1/auth/onboarding:
  *   post:
  *     summary: Complete onboarding for authenticated user
  *     tags: [Auth]
@@ -421,19 +428,44 @@ router.put("/profile", authenticate, upload.single("profilePic"), validate(updat
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required:
+ *               - role
  *             properties:
- *               purposes:
- *                 type: array
- *                 items:
- *                   type: string
+ *               role:
+ *                 type: string
+ *                 enum: [user, host]
+ *                 description: User role (user or host)
+ *               bio:
+ *                 type: string
+ *                 description: Host bio (required if role is host)
+ *               company:
+ *                 type: string
+ *                 description: Company name (optional for hosts)
+ *               phoneNumber:
+ *                 type: string
+ *                 description: Contact number (required if role is host)
  *               profilePic:
  *                 type: string
  *                 format: binary
+ *                 description: Profile picture (optional)
+ *               location:
+ *                 type: string
+ *                 description: Physical location/address (required if role is host)
  *     responses:
  *       200:
- *         description: Onboarding completed
+ *         description: Onboarding completed successfully
+ *       400:
+ *         description: Validation error or missing required fields
+ *       401:
+ *         description: Unauthorized - authentication required
  */
-router.post("/complete-onboarding", authenticate, upload.single("profilePic"), validate(completeOnboardingSchema), completeOnboarding);
+router.post(
+  "/onboarding",
+  authenticate,
+  upload.single('profilePic'),
+  validate(completeOnboardingSchema),
+  completeOnboarding
+);
 
 /**
  * @swagger
