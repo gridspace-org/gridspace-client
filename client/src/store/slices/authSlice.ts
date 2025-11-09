@@ -29,8 +29,13 @@ export interface AuthState {
 }
 
 interface AuthResponse {
-  user: User;
-  token: string;
+  success: boolean;
+  message: string;
+  data: {
+    user: User;
+    accessToken: string;
+    expiresIn?: number;
+  };
 }
 
 interface PasswordData {
@@ -50,19 +55,23 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 
 const isAuthResponse = (value: unknown): value is AuthResponse => {
   if (!isRecord(value)) return false;
-  const maybeUser = value.user;
-  const maybeToken = value.token;
-  return (
-    typeof maybeToken === "string" &&
-    isRecord(maybeUser) &&
-    (typeof maybeUser.id === "string" || typeof maybeUser._id === "string") &&
-    typeof maybeUser.email === "string" &&
-    typeof maybeUser.role === "string" &&
-    (typeof maybeUser.isVerified === "boolean" ||
-      typeof maybeUser.emailVerified === "boolean" ||
-      typeof maybeUser.isVerified === "undefined" ||
-      typeof maybeUser.emailVerified === "undefined")
-  );
+  
+  // Check if it's a wrapped response with data object
+  if (isRecord(value.data)) {
+    const data = value.data as Record<string, unknown>;
+    const maybeUser = data.user;
+    const maybeToken = data.accessToken;
+    return (
+      typeof value.success === "boolean" &&
+      typeof maybeToken === "string" &&
+      isRecord(maybeUser) &&
+      (typeof maybeUser.id === "string" || typeof maybeUser._id === "string") &&
+      typeof maybeUser.email === "string" &&
+      typeof maybeUser.role === "string"
+    );
+  }
+  
+  return false;
 };
 
 // Helper function to safely access localStorage
@@ -86,7 +95,7 @@ interface SignupData {
   fullname: string;
   email: string;
   password: string;
-  phonenumber: string;
+  phoneNumber: string;
   profilePic?: File;
 }
 
@@ -106,14 +115,14 @@ export const signup = createAsyncThunk(
   "auth/signup",
   async (userData: SignupData, { rejectWithValue }) => {
     try {
-      const response = await apiService.signup(userData);
+      const response = await apiService.signup(userData) as unknown;
       if (!isAuthResponse(response)) {
         throw new Error("Invalid response from server");
       }
       if (typeof window !== "undefined") {
-        localStorage.setItem("authToken", response.token);
+        localStorage.setItem("authToken", response.data.accessToken);
       }
-      return response;
+      return response as AuthResponse;
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "An unexpected error occurred";
@@ -129,14 +138,14 @@ export const signin = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await apiService.signin(credentials);
+      const response = await apiService.signin(credentials) as unknown;
       if (!isAuthResponse(response)) {
         throw new Error("Invalid response from server");
       }
       if (typeof window !== "undefined") {
-        localStorage.setItem("authToken", response.token);
+        localStorage.setItem("authToken", response.data.accessToken);
       }
-      return response;
+      return response as AuthResponse;
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "An unexpected error occurred";
@@ -149,14 +158,14 @@ export const googleAuth = createAsyncThunk(
   "auth/googleAuth",
   async (googleData: GoogleAuthData, { rejectWithValue }) => {
     try {
-      const response = await apiService.googleAuth(googleData);
+      const response = await apiService.googleAuth(googleData) as unknown;
       if (!isAuthResponse(response)) {
         throw new Error("Invalid response from server");
       }
       if (typeof window !== "undefined") {
-        localStorage.setItem("authToken", response.token);
+        localStorage.setItem("authToken", response.data.accessToken);
       }
-      return response;
+      return response as AuthResponse;
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Google authentication failed";
@@ -287,14 +296,14 @@ export const refreshToken = createAsyncThunk(
   "auth/refreshToken",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await apiService.refreshToken();
+      const response = await apiService.refreshToken() as unknown;
       if (!isAuthResponse(response)) {
         throw new Error("Invalid response from server");
       }
       if (typeof window !== "undefined") {
-        localStorage.setItem("authToken", response.token);
+        localStorage.setItem("authToken", response.data.accessToken);
       }
-      return response;
+      return response as AuthResponse;
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "An unexpected error occurred";
@@ -379,8 +388,8 @@ const authSlice = createSlice({
         signup.fulfilled,
         (state, action: PayloadAction<AuthResponse>) => {
           state.loading = false;
-          state.user = action.payload.user;
-          state.token = action.payload.token;
+          state.user = action.payload.data.user;
+          state.token = action.payload.data.accessToken;
           state.isAuthenticated = true;
           state.error = null;
         }
@@ -398,8 +407,8 @@ const authSlice = createSlice({
         signin.fulfilled,
         (state, action: PayloadAction<AuthResponse>) => {
           state.loading = false;
-          state.user = action.payload.user;
-          state.token = action.payload.token;
+          state.user = action.payload.data.user;
+          state.token = action.payload.data.accessToken;
           state.isAuthenticated = true;
           state.error = null;
         }
@@ -417,8 +426,8 @@ const authSlice = createSlice({
         googleAuth.fulfilled,
         (state, action: PayloadAction<AuthResponse>) => {
           state.loading = false;
-          state.user = action.payload.user;
-          state.token = action.payload.token;
+          state.user = action.payload.data.user;
+          state.token = action.payload.data.accessToken;
           state.isAuthenticated = true;
           state.error = null;
         }
@@ -552,8 +561,8 @@ const authSlice = createSlice({
         refreshToken.fulfilled,
         (state, action: PayloadAction<AuthResponse>) => {
           state.loading = false;
-          state.user = action.payload.user;
-          state.token = action.payload.token;
+          state.user = action.payload.data.user;
+          state.token = action.payload.data.accessToken;
           state.error = null;
         }
       )

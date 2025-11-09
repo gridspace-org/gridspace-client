@@ -1,29 +1,75 @@
 "use client";
 
-import { ChevronDown, Eye, Pause, Play } from "lucide-react";
-import { useMemo } from "react";
-
-type UserType = "Host" | "Guest" | "Admin";
-type UserStatus = "Active" | "Suspended";
-
-interface UserRow {
-  name: string;
-  email: string;
-  type: UserType;
-  status: UserStatus;
-  joined: string;
-  phone: string;
-}
+import { ChevronDown, Eye, Pause, Play, Users as UsersIcon } from "lucide-react";
+import { useState, useEffect } from "react";
+import adminApiService, { User } from "@/services/adminApi";
 
 export default function UsersPage() {
-  const rows = useMemo<UserRow[]>(
-    () => [
-      { name: "Deba Derek", email: "derek45@gmail.com", type: "Guest", status: "Active", joined: "June 22nd, 2025", phone: "08123456789" },
-      { name: "Sarah Johnson", email: "sarah@example.com", type: "Host", status: "Suspended", joined: "May 10th, 2025", phone: "08022223333" },
-      { name: "Henry Cole", email: "henry@example.com", type: "Guest", status: "Active", joined: "Apr 4th, 2025", phone: "08011112222" },
-    ],
-    []
-  );
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<'user' | 'host' | 'admin' | 'all'>('all');
+  const [selectedStatus, setSelectedStatus] = useState<'active' | 'suspended' | 'all'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [selectedRole, selectedStatus, currentPage]);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const params: any = {
+        page: currentPage,
+        limit: 10,
+      };
+      if (selectedRole !== 'all') params.role = selectedRole;
+      if (selectedStatus !== 'all') params.status = selectedStatus;
+      
+      const response = await adminApiService.getUsers(params);
+      setUsers(response.data.users);
+      setTotalPages(response.data.pagination.totalPages);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSuspend = async (userId: string) => {
+    try {
+      await adminApiService.suspendUser(userId, {
+        reason: 'other',
+        details: 'Suspended by admin',
+      });
+      fetchUsers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to suspend user');
+    }
+  };
+
+  const handleReactivate = async (userId: string) => {
+    try {
+      await adminApiService.reactivateUser(userId);
+      fetchUsers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to reactivate user');
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const getRoleDisplay = (role: string) => {
+    if (role === 'user') return 'Guest';
+    if (role === 'host') return 'Host';
+    if (role === 'admin') return 'Admin';
+    return role;
+  };
 
   return (
     <section className="flex flex-col items-start gap-6 w-full">
@@ -56,120 +102,114 @@ export default function UsersPage() {
       </div>
 
       {/* Users table card */}
-      <div className="w-full bg-white rounded-[8px] shadow-[0px_4px_4px_rgba(222,222,222,0.25)]">
-        <div className="p-6">
-          {/* Table header */}
-          <div className="hidden md:flex items-center gap-[169px] border-b border-[#D1D5DB] pb-[10px] text-[18px] font-semibold text-[#002F5B]">
-            <span className="w-[260px] shrink-0">User</span>
-            <span className="w-[120px] shrink-0">Type</span>
-            <span className="w-[140px] shrink-0">Status</span>
-            <span className="w-[180px] shrink-0">Joined</span>
-            <span className="w-[160px] shrink-0">Phone</span>
-            <span className="w-[120px] shrink-0">Action</span>
+      <div className="w-full bg-white rounded-md shadow-[0px_4px_4px_rgba(222,222,222,0.25)] p-4 md:p-6">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002F5B]"></div>
           </div>
-
-          {/* Rows */}
-          <div className="divide-y divide-[#D1D5DB]">
-            {rows.map((row, idx) => (
-              <div key={idx} className="py-4 md:py-6">
-                {/* Desktop row */}
-                <div className="hidden md:flex items-center gap-[115px]">
-                  {/* User */}
-                  <div className="w-[260px] shrink-0">
-                    <div className="flex flex-col">
-                      <span className="text-[18px] text-[#121212] tracking-[-0.25px]">{row.name}</span>
-                      <span className="text-[16px] text-[#6F6F6F] tracking-[-0.25px]">{row.email}</span>
-                    </div>
-                  </div>
-
-                  {/* Type */}
-                  <div className="w-[120px] shrink-0">
-                    <div className="inline-flex items-center px-[9px] py-[7px] rounded-full border border-[#D1D5DB] text-[14px] text-[#121212] bg-white">
-                      {row.type}
-                    </div>
-                  </div>
-
-                  {/* Status */}
-                  <div className="w-[140px] shrink-0">
-                    {row.status === "Active" ? (
-                      <div className="inline-flex items-center px-[9px] py-[7px] gap-1 rounded-full bg-[#DCFCE7] text-[14px] text-[#166534]">
-                        Active
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <p className="text-[16px] text-[#B91C1C]">{error}</p>
+            <button
+              onClick={fetchUsers}
+              className="px-4 py-2 bg-[#002F5B] text-white rounded-lg hover:bg-[#003d75]"
+            >
+              Retry
+            </button>
+          </div>
+        ) : users.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <UsersIcon className="w-16 h-16 text-[#D1D5DB]" />
+            <h3 className="text-[20px] font-semibold text-[#002F5B]">No Users Found</h3>
+            <p className="text-[16px] text-[#686767] text-center max-w-md">
+              There are no users matching your current filters. Try adjusting your filters or check back later.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-[#D1D5DB]">
+            <table className="w-full min-w-[900px]">
+              <thead>
+                <tr className="border-b border-[#D1D5DB]">
+                  <th className="text-left py-4 px-3 text-[16px] font-semibold text-[#002F5B]">User</th>
+                  <th className="text-left py-4 px-3 text-[16px] font-semibold text-[#002F5B]">Type</th>
+                  <th className="text-left py-4 px-3 text-[16px] font-semibold text-[#002F5B]">Status</th>
+                  <th className="text-left py-4 px-3 text-[16px] font-semibold text-[#002F5B]">Joined</th>
+                  <th className="text-left py-4 px-3 text-[16px] font-semibold text-[#002F5B]">Phone</th>
+                  <th className="text-left py-4 px-3 text-[16px] font-semibold text-[#002F5B]">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user._id} className="border-b border-[#D1D5DB] hover:bg-[#F9FBFC]">
+                    {/* User */}
+                    <td className="py-4 px-3">
+                      <div className="flex flex-col gap-1 min-w-[200px]">
+                        <span className="text-[16px] font-medium text-[#121212] tracking-[-0.25px]">{user.fullname}</span>
+                        <span className="text-[14px] text-[#6F6F6F] tracking-[-0.25px]">{user.email}</span>
                       </div>
-                    ) : (
-                      <div className="inline-flex items-center px-[9px] py-[7px] gap-1 rounded-full bg-[#FEE2E2] text-[14px] text-[#B91C1C]">
-                        Suspended
+                    </td>
+
+                    {/* Type */}
+                    <td className="py-4 px-3">
+                      <div className="inline-flex items-center px-[9px] py-[7px] rounded-full border border-[#D1D5DB] text-[14px] text-[#121212] bg-white">
+                        {getRoleDisplay(user.role)}
                       </div>
-                    )}
-                  </div>
+                    </td>
 
-                  {/* Joined */}
-                  <div className="w-[180px] shrink-0 text-[18px] text-[#686767]">{row.joined}</div>
-
-                  {/* Phone */}
-                  <div className="w-[160px] shrink-0 text-[18px] text-[#121212]">{row.phone}</div>
-
-                  {/* Action */}
-                  <div className="w-[120px] shrink-0 flex items-center gap-6">
-                    <button className="w-6 h-6" aria-label="View">
-                      <Eye className="w-6 h-6 text-[#002F5B]" />
-                    </button>
-                    {row.status === "Active" ? (
-                      <button className="w-6 h-6" aria-label="Suspend">
-                        <Pause className="w-6 h-6 text-[#B91C1C]" />
-                      </button>
-                    ) : (
-                      <button className="w-6 h-6" aria-label="Activate">
-                        <Play className="w-6 h-6 text-[#166534]" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Mobile row */}
-                <div className="md:hidden flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <span className="text-[18px] text-[#121212] tracking-[-0.25px]">{row.name}</span>
-                      <span className="text-[14px] text-[#6F6F6F] tracking-[-0.25px]">{row.email}</span>
-                    </div>
-                    <div className="inline-flex items-center px-[9px] py-[7px] rounded-full border border-[#D1D5DB] text-[14px] text-[#121212] bg-white">
-                      {row.type}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    {row.status === "Active" ? (
-                      <div className="inline-flex items-center px-[9px] py-[7px] gap-1 rounded-full bg-[#DCFCE7] text-[14px] text-[#166534]">
-                        Active
-                      </div>
-                    ) : (
-                      <div className="inline-flex items-center px-[9px] py-[7px] gap-1 rounded-full bg-[#FEE2E2] text-[14px] text-[#B91C1C]">
-                        Suspended
-                      </div>
-                    )}
-                    <span className="text-[14px] text-[#686767]">{row.joined}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[14px] text-[#121212]">{row.phone}</span>
-                    <div className="flex items-center gap-4">
-                      <button className="w-6 h-6" aria-label="View">
-                        <Eye className="w-6 h-6 text-[#002F5B]" />
-                      </button>
-                      {row.status === "Active" ? (
-                        <button className="w-6 h-6" aria-label="Suspend">
-                          <Pause className="w-6 h-6 text-[#B91C1C]" />
-                        </button>
+                    {/* Status */}
+                    <td className="py-4 px-3">
+                      {!user.suspension?.isSuspended ? (
+                        <div className="inline-flex items-center px-2 py-[7px] gap-1 bg-[#DCFCE7] rounded-full">
+                          <span className="text-[12px] text-[#166534]">Active</span>
+                        </div>
                       ) : (
-                        <button className="w-6 h-6" aria-label="Activate">
-                          <Play className="w-6 h-6 text-[#166534]" />
-                        </button>
+                        <div className="inline-flex items-center px-2 py-[7px] gap-1 bg-[#FEE2E2] rounded-full">
+                          <span className="text-[12px] text-[#B91C1C]">Suspended</span>
+                        </div>
                       )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+                    </td>
+
+                    {/* Joined */}
+                    <td className="py-4 px-3">
+                      <span className="text-[16px] text-[#686767]">{formatDate(user.createdAt)}</span>
+                    </td>
+
+                    {/* Phone */}
+                    <td className="py-4 px-3">
+                      <span className="text-[16px] text-[#121212]">{user.phoneNumber || 'N/A'}</span>
+                    </td>
+
+                    {/* Action */}
+                    <td className="py-4 px-3">
+                      <div className="flex items-center gap-4">
+                        <button className="w-6 h-6 flex items-center justify-center" aria-label="View">
+                          <Eye className="w-6 h-6 text-[#002F5B]" />
+                        </button>
+                        {!user.suspension?.isSuspended ? (
+                          <button
+                            onClick={() => handleSuspend(user._id)}
+                            className="w-6 h-6 flex items-center justify-center"
+                            aria-label="Suspend"
+                          >
+                            <Pause className="w-6 h-6 text-[#B91C1C]" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleReactivate(user._id)}
+                            className="w-6 h-6 flex items-center justify-center"
+                            aria-label="Activate"
+                          >
+                            <Play className="w-6 h-6 text-[#166534]" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

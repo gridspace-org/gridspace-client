@@ -8,11 +8,39 @@ The Booking API enables users to create, manage, and track space bookings, while
 
 ## 🔐 Authentication
 
-All endpoints require JWT authentication in the `Authorization` header. Some endpoints require specific user roles (host, admin).
+### Authentication Methods
+1. **HTTP-Only Cookies (Recommended for Browsers)**
+   - Access token is automatically sent with each request
+   - Refresh token is used to obtain new access tokens when they expire
 
+2. **Bearer Token (For API Clients)**
+   ```
+   Authorization: Bearer <access-token>
+   ```
+
+### Required Headers
 ```
-Authorization: Bearer <jwt_token>
+Content-Type: application/json
+Accept: application/json
 ```
+
+### Base URLs
+```
+Development:  http://localhost:5000/api/v1
+Production:   https://api.gridspace.com/api/v1
+```
+
+### Token Refresh
+When the access token expires (after 15 minutes), clients should:
+1. Make a POST request to `/api/v1/auth/refresh-token` with the refresh token cookie
+2. The server will return a new access token and refresh token
+
+### Role-Based Access
+- **User**: Can create, view, and manage their own bookings
+- **Host**: Can manage bookings for their spaces
+- **Admin**: Full access to all booking operations
+
+> **Note:** Moderator-only flows (suspensions, approvals) are detailed in the `ADMIN_API_DOCUMENTATION.md`.
 
 ---
 

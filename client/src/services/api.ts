@@ -4,7 +4,7 @@ interface SignupData {
   fullname: string;
   email: string;
   password: string;
-  phonenumber: string;
+  phoneNumber: string;
   profilePic?: File;
 }
 
@@ -48,7 +48,7 @@ type ApiResponse<T = unknown> = { message?: string } & {
 //   process.env.NEXT_PUBLIC_API_URL ||
 //   "https://gridspace-server.onrender.com/api";
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://gridspace-skaw.onrender.com/api";
+  process.env.NEXT_PUBLIC_API_URL || "https://grid-production-cb89.up.railway.app/api";
 
 class ApiService {
   private axiosInstance: AxiosInstance;
@@ -134,7 +134,7 @@ class ApiService {
         fullname: userData.fullname,
         email: userData.email,
         password: userData.password,
-        phonenumber: userData.phonenumber,
+        phoneNumber: userData.phoneNumber,
       });
 
       return this.handleResponse(response);

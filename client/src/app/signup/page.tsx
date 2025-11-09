@@ -112,7 +112,7 @@ export default function SignUpPage() {
                       fullname,
                       email,
                       password,
-                      phonenumber: phone,
+                      phoneNumber: phone,
                     })
                   ).unwrap();
 

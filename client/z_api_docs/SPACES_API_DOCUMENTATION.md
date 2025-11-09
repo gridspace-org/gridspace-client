@@ -8,11 +8,27 @@ The Space API allows hosts to create, manage, and list workspace spaces, while e
 
 ## 🔐 Authentication
 
-All protected endpoints require JWT authentication in the `Authorization` header.
+All protected endpoints require authentication. The API supports two authentication methods:
 
+### 1. HTTP-Only Cookies (Recommended for Browsers)
+- Access token is automatically sent with each request via HTTP-only cookie
+- Refresh token is used to obtain new access tokens when they expire
+
+### 2. Bearer Token (For API Clients)
 ```
-Authorization: Bearer <jwt_token>
+Authorization: Bearer <access-token>
 ```
+
+### Required Headers
+```
+Content-Type: application/json
+Accept: application/json
+```
+
+### Token Refresh
+When the access token expires (after 15 minutes), clients should:
+1. Make a POST request to `/api/v1/auth/refresh-token` with the refresh token cookie
+2. The server will return a new access token and refresh token
 
 ---
 
@@ -31,8 +47,8 @@ Authorization: Bearer <jwt_token>
 | `priceMin` | `number`     | Minimum price per hour                     | `1000`                                        |
 | `priceMax` | `number`     | Maximum price per hour                     | `5000`                                        |
 | `capacity` | `number`     | Minimum capacity                           | `4`                                           |
-| `purposes` | `string`     | Comma-separated list of space purposes     | `Remote Work,Team Meetings`                   |
-| `amenities`| `string`     | Comma-separated list of required amenities | `WiFi,Air Conditioning`                       |
+| `purposes` | `array`      | Repeatable query key for purposes          | `purposes=Remote Work&purposes=Team Meetings` |
+| `amenities`| `array`      | Repeatable query key for amenities         | `amenities=WiFi&amenities=Air Conditioning`   |
 | `page`     | `number`     | Page number (default: `1`)                 | `1`                                           |
 | `limit`    | `number`     | Items per page (default: `12`)             | `12`                                          |
 | `sortBy`   | `string`     | Sort order                                 | `price_low_high`, `price_high_low`, `newest`  |
@@ -40,7 +56,7 @@ Authorization: Bearer <jwt_token>
 #### Example Request
 
 ```bash
-GET /api/spaces?location=Lagos&priceMin=1000&priceMax=5000&capacity=4&purposes=Remote%20Work,Team%20Meetings&amenities=WiFi,Air%20Conditioning&page=1&limit=12&sortBy=price_low_high
+GET /api/spaces?location=Lagos&priceMin=1000&priceMax=5000&capacity=4&purposes=Remote%20Work&purposes=Team%20Meetings&amenities=WiFi&amenities=Air%20Conditioning&page=1&limit=12&sortBy=price_low_high
 ```
 
 #### Success Response (200 OK)
@@ -138,35 +154,59 @@ GET /api/spaces/68e3ba50af4d71f165d30511
 ### 3. ➕ Create Space
 
 - **Endpoint:** `POST /api/spaces`
-- **Description:** Host creates a new space (Host role required).
+- **Description:** Host creates a new space (Host role & onboarding completed required).
 - **Headers:**
     - `Authorization: Bearer <host_jwt_token>`
-    - `Content-Type: application/json`
+    - `Content-Type: multipart/form-data` *(let your HTTP client generate the boundary)*
 
-#### Request Body
+#### Form Fields
 
-```json
-{
-  "title": "Premium Co-working Space",
-  "description": "A beautiful co-working space...",
-  "location": "Lagos Island",
-  "address": "123 Business Avenue",
-  "pricePerHour": 3000,
-  "capacity": 20,
-  "purposes": ["Remote Work", "Team Meetings", "Networking"],
-  "amenities": ["WiFi", "Air Conditioning", "Coffee/Tea", "Power Backup"]
-}
+| Field | Type | Notes |
+| :---- | :---- | :---- |
+| `title` | Text | 5–100 chars (required) |
+| `description` | Text | 10–1000 chars (required) |
+| `location` | Text | 3–200 chars (required) |
+| `address` | Text | Optional |
+| `pricePerHour` | Number | 500–50,000 ₦ (required) |
+| `capacity` | Number | 1–100 (required) |
+| `purposes[]` | Text (repeatable) | Values must match list below |
+| `amenities[]` | Text (repeatable) | Values must match list below |
+| `timeSlots` | JSON array | e.g. `[{"day":"monday","startTime":"09:00","endTime":"17:00"}]` (optional) |
+| `images` | File (repeatable, max 5) | JPG/PNG uploads |
+
+> **Tip:** When using Postman select **form-data**, add keys as shown above, and let Postman set the `Content-Type` header automatically so the multipart boundary is present.
+
+#### JSON Reference (for implementing UI forms)
+
+```bash
+curl -X POST https://grid-production-cb89.up.railway.app/api/spaces \
+  -H "Authorization: Bearer <host_jwt_token>" \
+  -F "title=Premium Co-working Space" \
+  -F "description=A beautiful co-working space..." \
+  -F "location=Lagos Island" \
+  -F "address=123 Business Avenue" \
+  -F "pricePerHour=3000" \
+  -F "capacity=20" \
+  -F "purposes[]=Remote Work" \
+  -F "purposes[]=Team Meetings" \
+  -F "amenities[]=WiFi" \
+  -F "amenities[]=Air Conditioning" \
+  -F 'timeSlots=[{"day":"monday","startTime":"09:00","endTime":"17:00"}]'
 ```
+
+Send the `timeSlots` field as a JSON array string when using `curl` or form-data clients. The current API ignores `timeSlots` values until the persistence logic is implemented, so it is optional for now.
 
 #### Field Validations
 
-- `title`: 5-100 characters, required
-- `description`: 10-1000 characters, required
-- `location`: 3-200 characters, required
-- `pricePerHour`: 500-50000 ₦, required
-- `capacity`: 1-100 people, required
-- `purposes`: Array of valid purposes
-- `amenities`: Array of valid amenities
+- `title`: 5–100 characters, required
+- `description`: 10–1000 characters, required
+- `location`: 3–200 characters, required
+- `pricePerHour`: 500–50,000 ₦, required
+- `capacity`: 1–100 people, required
+- `purposes[]`: Allowed values listed below (case-sensitive)
+- `amenities[]`: Allowed values listed below (case-sensitive)
+- `images`: up to 5 files
+- `timeSlots`: optional array; if provided, include `day`, `startTime`, `endTime`
 
 #### Available Purposes
 
@@ -264,7 +304,7 @@ GET /api/spaces/68e3ba50af4d71f165d30511
 - **Description:** Update a space (Host must own the space).
 - **Headers:**
     - `Authorization: Bearer <host_jwt_token>`
-    - `Content-Type: application/json`
+    - `Content-Type: multipart/form-data`
 
 #### Parameters
 
@@ -272,7 +312,9 @@ GET /api/spaces/68e3ba50af4d71f165d30511
 | :-------- | :------- | :---------- |
 | `id`      | `string` | Space ID    |
 
-#### Request Body (Include only fields to update)
+#### Form Fields
+
+Send only the fields you wish to change using form-data (same format as creation). You may upload new `images` to append to the existing list (backend trims to max 5).
 
 ```json
 {
@@ -281,9 +323,18 @@ GET /api/spaces/68e3ba50af4d71f165d30511
   "pricePerHour": 3500,
   "capacity": 15,
   "amenities": ["WiFi", "Air Conditioning", "Projector"],
-  "purposes": ["Team Meetings", "Presentations"]
+  "purposes": ["Team Meetings", "Presentations"],
+  "timeSlots": [
+    {
+      "day": "tuesday",
+      "startTime": "10:00",
+      "endTime": "16:00"
+    }
+  ]
 }
 ```
+
+> **Note:** Although the reference above is JSON, the request must be `multipart/form-data` when submitting through the API.
 
 #### Success Response (200 OK)
 
@@ -361,8 +412,12 @@ const buildSearchUrl = (filters) => {
   if (filters.priceMin) params.append('priceMin', filters.priceMin);
   if (filters.priceMax) params.append('priceMax', filters.priceMax);
   if (filters.capacity) params.append('capacity', filters.capacity);
-  if (filters.purposes) params.append('purposes', filters.purposes.join(','));
-  if (filters.amenities) params.append('amenities', filters.amenities.join(','));
+  if (filters.purposes) {
+    filters.purposes.forEach(purpose => params.append('purposes', purpose));
+  }
+  if (filters.amenities) {
+    filters.amenities.forEach(amenity => params.append('amenities', amenity));
+  }
   params.append('page', filters.page || 1);
   params.append('limit', filters.limit || 12);
   params.append('sortBy', filters.sortBy || 'newest');

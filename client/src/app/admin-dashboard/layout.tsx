@@ -1,14 +1,23 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { useAppSelector } from "@/store/hooks";
 import AdminNav from "./AdminNav";
 
 export default function AdminDashboardLayout({ children }: { children: ReactNode }) {
   const { user } = useAppSelector((state) => state.auth);
-  const userName = user?.fullname || "Admin";
-  const adminSince = new Date(user?.createdAt || Date.now()).getFullYear().toString();
-  const profilePic = user?.profilePic || "/avatar-placeholder.png";
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Prevent hydration mismatch by using consistent default values during SSR
+  const userName = mounted ? (user?.fullname || "Admin") : "Admin";
+  const adminSince = mounted && user?.createdAt 
+    ? new Date(user.createdAt).getFullYear().toString() 
+    : "2025";
+  const profilePic = mounted ? (user?.profilePic || "/avatar-placeholder.png") : "/avatar-placeholder.png";
 
   return (
     <div className="min-h-screen bg-[#F7F5F5]">

@@ -69,7 +69,7 @@ class BookingsApiService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://gridspace-skaw.onrender.com/api';
+    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://grid-production-cb89.up.railway.app/api';
   }
 
   private async getAuthToken(): Promise<string | null> {
