@@ -1,4 +1,4 @@
-const bookingValidator = require('../../validators/booking.validator');
+import { createBookingValidation } from '../../validators/booking.validator.js';
 
 describe('Booking Validator', () => {
   test('should validate correct booking data', () => {
@@ -9,7 +9,7 @@ describe('Booking Validator', () => {
     };
 
     // This will FAIL initially (expected in TDD)
-    const { error, value } = bookingValidator.validate(validBooking);
+    const { error, value } = createBookingValidation.validate(validBooking);
     expect(error).toBeUndefined();
     expect(value).toEqual(validBooking);
   });
@@ -20,7 +20,7 @@ describe('Booking Validator', () => {
       endTime: '2024-01-20T12:00:00.000Z'
     };
 
-    const { error } = bookingValidator.validate(invalidBooking);
+    const { error } = createBookingValidation.validate(invalidBooking);
     expect(error).toBeDefined();
     expect(error.details[0].message).toContain('spaceId');
   });

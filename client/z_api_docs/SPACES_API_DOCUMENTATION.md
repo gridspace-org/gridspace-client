@@ -19,16 +19,14 @@ All protected endpoints require authentication. The API supports two authenticat
 Authorization: Bearer <access-token>
 ```
 
-### Required Headers
+## ⚙️ Base URL
+
 ```
-Content-Type: application/json
-Accept: application/json
+Local:        http://localhost:5000
+Production:   https://grid-production-cb89.up.railway.app
 ```
 
-### Token Refresh
-When the access token expires (after 15 minutes), clients should:
-1. Make a POST request to `/api/v1/auth/refresh-token` with the refresh token cookie
-2. The server will return a new access token and refresh token
+For space moderation endpoints (approve/reject), consult `doc/admin-implementation/ADMIN_API_DOCUMENTATION.md`.
 
 ---
 

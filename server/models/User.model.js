@@ -7,13 +7,13 @@ const userSchema = new mongoose.Schema({
     required: [true, "Full name is required"],
     trim: true,
   },
-  phoneNumber: {
+  phonenumber: {
     type: String,
     required: function () {
-      return this.authProvider !== 'google'; // Only required for local users
+      return this.authProvider !== "google"; // Only required for local users
     },
     unique: true,
-    sparse: true, // Allows multiple null values for OAuth users
+    sparse: true,
     trim: true,
   },
   email: {
@@ -45,6 +45,28 @@ const userSchema = new mongoose.Schema({
     enum: ["user", "host", "admin"],
     default: "user",
   },
+  refreshTokens: [
+    {
+      token: {
+        type: String,
+        required: true,
+      },
+      expiresAt: {
+        type: Date,
+        required: true,
+      },
+      userAgent: String,
+      ipAddress: String,
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
+  permissions: {
+    type: [String],
+    default: [],
+  },
   profilePic: {
     type: String,
     default: null,
@@ -67,6 +89,43 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  suspension: {
+    isSuspended: {
+      type: Boolean,
+      default: false,
+    },
+    reason: {
+      type: String,
+      enum: [
+        "fraud",
+        "policy_violation",
+        "chargeback_dispute",
+        "abuse",
+        "other",
+        null,
+      ],
+      default: null,
+    },
+    details: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: null,
+    },
+    suspendedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    suspendedAt: {
+      type: Date,
+      default: null,
+    },
+    resumeAt: {
+      type: Date,
+      default: null,
+    },
+  },
   location: {
     type: String,
     trim: true,
@@ -75,6 +134,7 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  passwordChangedAt: Date,
 });
 
 // Pre-save middleware to hash password
@@ -86,11 +146,24 @@ userSchema.pre("save", async function (next) {
     // Hash password with cost of 12
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
+    this.passwordChangedAt = Date.now() - 1000;
     next();
   } catch (error) {
     next(error);
   }
 });
+
+// Instance method to check if password was changed after token was issued
+userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
+  if (this.passwordChangedAt) {
+    const changedTimestamp = parseInt(
+      this.passwordChangedAt.getTime() / 1000,
+      10
+    );
+    return JWTTimestamp < changedTimestamp;
+  }
+  return false;
+};
 
 // Instance method to compare password
 userSchema.methods.comparePassword = async function (candidatePassword) {

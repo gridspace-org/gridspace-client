@@ -1,6 +1,6 @@
 import Review from '../models/Review.model.js';
 import Booking from '../models/Booking.model.js';
-import logger from '../config/logger.js';
+import { logger } from '../config/logger.js';
 
 /**
  * Verify user is eligible to review a space (has completed booking)

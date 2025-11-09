@@ -7,11 +7,12 @@ const swaggerOptions = {
     openapi: '3.0.0',
     info: {
       title: 'GridSpace API',
-      version: '1.0.0',
-      description: 'Production-ready space booking and management platform API',
+      version: '1.1.0',
+      description: 'Comprehensive API for managing workspaces, bookings, and user interactions',
       contact: {
-        name: 'GridSpace API Support',
-        email: 'support@gridspace.com'
+        name: 'GridSpace Support',
+        email: 'support@gridspace.com',
+        url: 'https://gridspace.com/support'
       },
       license: {
         name: 'MIT',
@@ -20,10 +21,24 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: process.env.NODE_ENV === 'production'
-          ? process.env.PRODUCTION_URL || 'https://api.gridspace.com'
-          : `http://localhost:${process.env.PORT || 5000}`,
-        description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server'
+        url: 'https://grid-production-cb89.up.railway.app/api/v1',
+        description: 'Production API (Railway)',
+        variables: {
+          basePath: {
+            default: '/api/v1',
+            description: 'API base path',
+          }
+        }
+      },
+      {
+        url: 'http://localhost:5002/api/v1',
+        description: 'Local Development',
+        variables: {
+          basePath: {
+            default: '/api/v1',
+            description: 'API base path',
+          }
+        }
       }
     ],
     components: {
@@ -32,9 +47,24 @@ const swaggerOptions = {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
-          description: 'JWT Authorization header using the Bearer scheme. Example: "Authorization: Bearer {token}"'
+          description: 'JWT Authorization header using the Bearer scheme. Example: "Authorization: Bearer {token}"',
+          in: 'header'
+        },
+        cookieAuth: {
+          type: 'apiKey',
+          in: 'cookie',
+          name: 'token',
+          description: 'JWT token stored in HTTP-only cookie (for browser-based access)'
         }
       },
+      security: [
+        {
+          bearerAuth: []
+        },
+        {
+          cookieAuth: []
+        }
+      ],
       schemas: {
         Error: {
           type: 'object',
@@ -138,8 +168,10 @@ const swaggerOptions = {
   },
   apis: [
     './routes/*.js',
-    './controllers/*.js',
-    './models/*.js'
+    './models/*.js',
+    './controllers/**/*.js',
+    './middleware/*.js',
+    './validators/*.js'
   ]
 };
 

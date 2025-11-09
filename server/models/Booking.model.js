@@ -159,6 +159,8 @@ const bookingSchema = new mongoose.Schema({
 
   // ===== PAYMENT WINDOW MANAGEMENT =====
   // 5-minute expiry for pending bookings to prevent slot hogging
+  
+
   expiresAt: {
     type: Date,
     required: function() {
@@ -209,6 +211,8 @@ bookingSchema.pre("save", function(next) {
     this.hostEarnings = totalBasePrice; // Host gets 100% of their asking price
   }
 
+  
+
   // Set 5-minute expiry for new pending bookings
   if (this.status === 'pending' && !this.expiresAt) {
     this.expiresAt = new Date(Date.now() + 5 * 60 * 1000);
@@ -225,6 +229,7 @@ bookingSchema.plugin(mongoosePaginate);
 bookingSchema.index({ spaceId: 1, startTime: 1, endTime: 1 }); // Conflict detection
 bookingSchema.index({ userId: 1, status: 1 });                 // User dashboard queries
 bookingSchema.index({ spaceId: 1, status: 1 });                // Host management queries
+
 bookingSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // Auto-cleanup expired
 bookingSchema.index({ status: 1, paymentStatus: 1 });          // Admin reporting
 bookingSchema.index({ "cancellationInfo.cancelledAt": 1 });    // Cancellation analytics

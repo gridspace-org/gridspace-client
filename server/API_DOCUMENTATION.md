@@ -1,67 +1,192 @@
-# GridSpace Authentication API Documentation
+# GridSpace API Documentation
 
-## Base URL
+## Table of Contents
+- [Base URLs](#base-urls)
+- [Authentication](#authentication)
+- [Token Refresh](#token-refresh)
+- [Rate Limiting](#rate-limiting)
+- [Error Handling](#error-handling)
+- [Cookies](#cookies)
+- [Endpoints](#endpoints)
+  - [Authentication](#authentication-1)
+  - [Profile](#profile)
+  - [Password Management](#password-management)
+  - [Email Verification](#email-verification)
+  - [OAuth](#oauth)
+
+## Base URLs
 
 ```
-http://localhost:5000/api/auth
+Development:  http://localhost:5000/api/v1
+Production:   https://api.gridspace.com.ng/api/v1
 ```
 
 ## Authentication
 
-Most endpoints require authentication via JWT token in the Authorization header:
+### Access Token
+- **Lifetime**: 15 minutes
+- **Storage**: HTTP-only cookie
+- **Path**: `/`
+- **Required for**: All protected routes
+
+### Refresh Token
+- **Lifetime**: 7 days
+- **Storage**: HTTP-only cookie
+- **Path**: `/api/v1/auth/refresh-token`
+- **Used for**: Obtaining new access tokens
+
+### Request Headers
+
+For API clients that can't use cookies, include the access token in the Authorization header:
 
 ```
-Authorization: Bearer <your-jwt-token>
+Authorization: Bearer <access-token>
+```
+
+## Cookies
+
+The API uses HTTP-only cookies for secure token storage:
+
+| Cookie Name   | Description          | Path                      | Max Age  | HTTP Only | Secure | SameSite |
+|---------------|----------------------|---------------------------|----------|-----------|--------|----------|
+| accessToken   | JWT access token     | /                         | 15m      | Yes       | Yes*   | Strict   |
+| refreshToken  | Refresh token        | /api/v1/auth/refresh-token| 7d       | Yes       | Yes*   | Strict   |
+
+*Secure flag is enabled in production only
+
+## Token Refresh
+
+When an access token expires:
+
+1. The client should make a POST request to `/api/v1/auth/refresh-token`
+2. The request must include the refresh token in an HTTP-only cookie
+3. The server will respond with:
+   - A new access token in the response body
+   - A new refresh token in an HTTP-only cookie
+   - Both tokens in the response headers (for non-browser clients)
+
+**Example Request:**
+```
+POST /api/v1/auth/refresh-token
+Cookie: refreshToken=<refresh-token>
+```
+
+**Example Response:**
+```json
+{
+  "success": true,
+  "message": "Token refreshed successfully",
+  "data": {
+    "accessToken": "new-access-token",
+    "expiresIn": 900
+  }
+}
+```
+
+### Automatic Refresh
+For browser-based clients, the refresh process is handled automatically by the `refreshIfNeeded` middleware.
+
+## Rate Limiting
+
+| Endpoint Type        | Limit      | Window    |
+|----------------------|------------|-----------|
+| Authentication       | 5 requests | 15 minutes|
+| API Endpoints        | 100 requests| 15 minutes|
+| Public Endpoints     | 200 requests| 1 hour   |
+
+## Error Handling
+
+### Common HTTP Status Codes
+- `200 OK` - Request successful
+- `201 Created` - Resource created
+- `400 Bad Request` - Invalid request data
+- `401 Unauthorized` - Authentication required
+- `403 Forbidden` - Insufficient permissions
+- `404 Not Found` - Resource not found
+- `429 Too Many Requests` - Rate limit exceeded
+- `500 Internal Server Error` - Server error
+
+### Error Response Format
+
+```json
+{
+  "success": false,
+  "message": "Error description",
+  "code": "ERROR_CODE",
+  "details": {
+    // Additional error details
+  }
+}
 ```
 
 ## Endpoints
 
-### 1. User Registration
+## Authentication
 
-**POST** `/signup`
+### Register New User
+
+**POST** `/auth/signup`
 
 Register a new user account.
 
-**Request Body:**
+**Request Body (multipart/form-data):**
 
-```json
-{
-  "fullname": "John Doe",
-  "email": "john@example.com",
-  "password": "password123",
-  "phonenumber": "+1234567890"
-}
+| Field       | Type   | Required | Description                          |
+|-------------|--------|----------|--------------------------------------|
+| fullname    | string | Yes      | User's full name                     |
+| email       | string | Yes      | User's email address (must be unique)|
+| password    | string | Yes      | Password (min 6 characters)          |
+| phonenumber | string | Yes      | User's phone number (must be unique) |
+| profilePic  | file   | No       | Optional profile picture             |
+
+**Example Request:**
+
+```bash
+curl -X POST "http://localhost:5002/api/v1/auth/signup" \
+  -F "fullname=John Doe" \
+  -F "email=john@example.com" \
+  -F "password=password123" \
+  -F "phonenumber=+1234567890" \
+  -F "profilePic=@/path/to/avatar.jpg"
 ```
 
 **Form Data:**
-
-- `profilePic` (optional): Image file for profile picture
+- `profilePic` (optional): Image file for profile picture (max 5MB)
 
 **Response:**
 
 ```json
 {
   "success": true,
-  "message": "User created successfully",
-  "token": "jwt-token-here",
-  "user": {
-    "_id": "user-id",
-    "fullname": "John Doe",
-    "email": "john@example.com",
-    "phonenumber": "+1234567890",
-    "role": "user",
-    "profilePic": "cloudinary-url",
-    "emailVerified": false,
-    "createdAt": "2024-01-01T00:00:00.000Z"
+  "message": "User registered successfully",
+  "data": {
+    "user": {
+      "_id": "60d21b4667d0d8992e610c85",
+      "fullname": "John Doe",
+      "email": "john@example.com",
+      "phonenumber": "+1234567890",
+      "role": "user",
+      "profilePic": "https://res.cloudinary.com/...",
+      "emailVerified": false,
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": 900
   }
 }
 ```
 
-### 2. User Login
+**Error Responses:**
+- `400` - Invalid input data
+- `409` - Email already registered
+- `413` - Profile picture too large
+- `500` - Server error
 
-**POST** `/signin`
+### User Login
 
-Authenticate user and return JWT token.
+**POST** `/auth/signin`
+
+Authenticate user and return access and refresh tokens.
 
 **Request Body:**
 
@@ -78,33 +203,183 @@ Authenticate user and return JWT token.
 {
   "success": true,
   "message": "Login successful",
-  "token": "jwt-token-here",
-  "user": {
-    "_id": "user-id",
-    "fullname": "John Doe",
-    "email": "john@example.com",
-    "phonenumber": "+1234567890",
-    "role": "user",
-    "profilePic": "cloudinary-url",
-    "emailVerified": false,
-    "authProvider": "local",
-    "googleId": null,
-    "onboardingCompleted": false,
-    "purposes": [],
-    "location": null,
-    "createdAt": "2024-01-01T00:00:00.000Z"
+  "data": {
+    "user": {
+      "_id": "60d21b4667d0d8992e610c85",
+      "fullname": "John Doe",
+      "email": "john@example.com",
+      "role": "user",
+      "profilePic": "https://res.cloudinary.com/...",
+      "emailVerified": true,
+      "onboardingCompleted": true
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": 900
   }
 }
 ```
 
-### 3. Google OAuth Authentication
+**Cookies Set:**
+- `accessToken` - HTTP-only, secure, same-site=strict
+- `refreshToken` - HTTP-only, secure, same-site=strict, path=/api/v1/auth/refresh-token
 
-**POST** `/google`
+**Error Responses:**
+- `400` - Invalid input data
+- `401` - Invalid credentials
+- `403` - Account not verified or suspended
+- `429` - Too many attempts
 
-Authenticate user with Google ID token (client-side flow).
+### Refresh Access Token
+
+**POST** `/auth/refresh-token`
+
+Get a new access token using a refresh token.
+
+**Cookies Required:**
+- `refreshToken` - Must be a valid refresh token
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Token refreshed successfully",
+  "data": {
+    "accessToken": "new-access-token-here",
+    "expiresIn": 900
+  }
+}
+```
+
+**Error Responses:**
+- `401` - Invalid or expired refresh token
+- `403` - Refresh token not found or revoked
+
+### Logout
+
+**POST** `/auth/logout`
+
+Invalidate the current session and clear tokens.
+
+**Cookies Required:**
+- `refreshToken` - To identify the session to invalidate
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Logged out successfully"
+}
+```
+
+**Cookies Cleared:**
+- `accessToken`
+- `refreshToken`
+
+## Profile
+
+### Get Current User Profile
+
+**GET** `/auth/profile`
+
+Get the authenticated user's profile.
+
+**Headers:**
+```
+Authorization: Bearer <access-token>
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "_id": "60d21b4667d0d8992e610c85",
+      "fullname": "John Doe",
+      "email": "john@example.com",
+      "phonenumber": "+1234567890",
+      "role": "user",
+      "profilePic": "https://res.cloudinary.com/...",
+      "emailVerified": true,
+      "onboardingCompleted": true,
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    }
+  }
+}
+```
+
+## Password Management
+
+### Request Password Reset
+
+**POST** `/auth/request-password-reset`
+
+Send a password reset email with a one-time token.
 
 **Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
 
+### Reset Password
+
+**POST** `/auth/reset-password`
+
+Reset password using the token from the email.
+
+**Request Body:**
+```json
+{
+  "token": "reset-token-from-email",
+  "password": "new-secure-password",
+  "passwordConfirm": "new-secure-password"
+}
+```
+
+## Email Verification
+
+### Send Verification Email
+
+**POST** `/auth/send-verification-email`
+
+Request a new verification email.
+
+**Headers:**
+```
+Authorization: Bearer <access-token>
+```
+
+### Verify Email
+
+**GET** `/auth/verify-email?token=verification-token`
+
+Verify email using the token from the email.
+
+## OAuth
+
+### Google OAuth
+
+**GET** `/auth/google`
+
+Start Google OAuth flow.
+
+**Response:**
+Redirects to Google consent screen, then to:
+- Success: `/?success=true&token=<jwt-token>`
+- Error: `/?success=false&error=error-message`
+
+### Google OAuth (Direct Token)
+
+**POST** `/auth/google/token`
+
+Authenticate with a Google ID token.
+
+**Request Body:**
 ```json
 {
   "idToken": "google-id-token-here"
@@ -116,16 +391,19 @@ Authenticate user with Google ID token (client-side flow).
 ```json
 {
   "success": true,
-  "message": "Google signin successful",
-  "token": "jwt-token-here",
-  "user": {
-    "_id": "user-id",
-    "fullname": "John Doe",
-    "email": "john@example.com",
-    "phonenumber": "+1234567890",
-    "role": "user",
-    "profilePic": "google-profile-pic-url",
-    "emailVerified": true,
+  "message": "Google authentication successful",
+  "data": {
+    "user": {
+      "_id": "60d21b4667d0d8992e610c85",
+      "fullname": "John Doe",
+      "email": "john@example.com",
+      "profilePic": "https://lh3.googleusercontent.com/..."
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": 900
+  }
+}
+```
     "authProvider": "google",
     "googleId": "google-user-id",
     "onboardingCompleted": false,
@@ -329,12 +607,6 @@ Authorization: Bearer <jwt-token>
 
 ```json
 {
-  "success": true,
-  "message": "Password changed successfully"
-}
-```
-
-### 10. Request Password Reset
 
 **POST** `/request-password-reset`
 
@@ -348,15 +620,73 @@ Request a password reset token.
 }
 ```
 
+**Example Request:**
+```bash
+curl -X POST "https://grid-production-cb89.up.railway.app/api/v1/auth/request-password-reset" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com"}'
+```
+
 **Response:**
 
 ```json
 {
   "success": true,
-  "message": "Password reset token generated",
-  "resetToken": "reset-token-here"
+  "message": "Password reset email sent to your email address"
 }
 ```
+
+#### 2. Check Email for Reset Link
+
+- Look for an email with subject "Password Reset Request"
+- **Important**: The email contains a link with a `token` parameter
+- The token is a long string in the format: `?token=abc123...`
+
+#### 3. Reset Password (Using Token from Email)
+
+**POST** `/reset-password`
+
+Reset password using the token from the reset link.
+
+**Request Body:**
+
+```json
+{
+  "email": "john@example.com",
+  "token": "YOUR_RESET_TOKEN_FROM_EMAIL",
+  "newPassword": "NewSecurePassword123!"
+}
+```
+
+**Example Request:**
+```bash
+curl -X POST "https://grid-production-cb89.up.railway.app/api/v1/auth/reset-password" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "token": "YOUR_RESET_TOKEN_FROM_EMAIL",
+    "newPassword": "NewSecurePassword123!"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Password reset successfully"
+}
+```
+
+**Notes:**
+
+- The token is valid for 1 hour
+- Password must be at least 8 characters with:
+  - Uppercase letter
+  - Lowercase letter
+  - Number
+  - Special character
+- After successful reset, all active sessions will be invalidated
 
 ### 11. Reset Password
 

@@ -8,11 +8,28 @@ The Space API allows hosts to create, manage, and list workspace spaces, while e
 
 ## 🔐 Authentication
 
-All protected endpoints require JWT authentication in the `Authorization` header.
+All protected endpoints require authentication. The API supports two authentication methods:
 
+### 1. HTTP-Only Cookies (Recommended for Browsers)
+- Access token is automatically sent with each request via HTTP-only cookie
+- Refresh token is used to obtain new access tokens when they expire
+
+### 2. Bearer Token (For API Clients)
 ```
-Authorization: Bearer <jwt_token>
+Authorization: Bearer <access-token>
 ```
+
+### Required Headers
+```
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer <token>  # For protected routes
+```
+
+### Token Refresh
+When the access token expires (after 15 minutes), clients should:
+1. Make a POST request to `/api/v1/auth/refresh-token` with the refresh token cookie
+2. The server will return a new access token and refresh token
 
 ---
 
@@ -155,36 +172,30 @@ GET /api/spaces/68e3ba50af4d71f165d30511
 | `capacity` | Number | 1–100 (required) |
 | `purposes[]` | Text (repeatable) | Values must match list below |
 | `amenities[]` | Text (repeatable) | Values must match list below |
-| `timeSlots[0].day` | Text | e.g. `monday` |
-| `timeSlots[0].startTime` | Text | 24-hr format `HH:mm` |
-| `timeSlots[0].endTime` | Text | 24-hr format `HH:mm` |
+| `timeSlots` | JSON array | e.g. `[{"day":"monday","startTime":"09:00","endTime":"17:00"}]` (optional) |
 | `images` | File (repeatable, max 5) | JPG/PNG uploads |
 
 > **Tip:** When using Postman select **form-data**, add keys as shown above, and let Postman set the `Content-Type` header automatically so the multipart boundary is present.
 
 #### JSON Reference (for implementing UI forms)
 
-```json
-{
-  "title": "Premium Co-working Space",
-  "description": "A beautiful co-working space...",
-  "location": "Lagos Island",
-  "address": "123 Business Avenue",
-  "pricePerHour": 3000,
-  "capacity": 20,
-  "purposes": ["Remote Work", "Team Meetings", "Networking"],
-  "amenities": ["WiFi", "Air Conditioning", "Coffee/Tea", "Power Backup"],
-  "timeSlots": [
-    {
-      "day": "monday",
-      "startTime": "09:00",
-      "endTime": "17:00"
-    }
-  ]
-}
+```bash
+curl -X POST https://grid-production-cb89.up.railway.app/api/v1/spaces \
+  -H "Authorization: Bearer <host_jwt_token>" \
+  -F "title=Premium Co-working Space" \
+  -F "description=A beautiful co-working space..." \
+  -F "location=Lagos Island" \
+  -F "address=123 Business Avenue" \
+  -F "pricePerHour=3000" \
+  -F "capacity=20" \
+  -F "purposes[]=Remote Work" \
+  -F "purposes[]=Team Meetings" \
+  -F "amenities[]=WiFi" \
+  -F "amenities[]=Air Conditioning" \
+  -F 'timeSlots=[{"day":"monday","startTime":"09:00","endTime":"17:00"}]'
 ```
 
-Use this structure to build the form payload, but remember that the actual request must be sent as `multipart/form-data`.
+Send the `timeSlots` field as a JSON array string when using `curl` or form-data clients. The current API ignores `timeSlots` values until the persistence logic is implemented, so it is optional for now.
 
 #### Field Validations
 

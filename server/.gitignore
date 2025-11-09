@@ -9,6 +9,7 @@ test-migration.mjs
 esm-migration-audit/
 
 # Documentation (generated/in-progress)
+docs/
 API_DOCUMENTATION.md
 SPACES_API_DOCUMENTATION.md
 BOOKINGS_API_DOCUMENTATION.md
@@ -18,3 +19,4 @@ bugfix_plan.md
 production-requirements.md
 README.local.md
 node_modules
+.env

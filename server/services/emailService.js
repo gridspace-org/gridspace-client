@@ -1,62 +1,10 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 class EmailService {
   constructor() {
-    // Create transporter based on environment
-    this.transporter = this.createTransporter();
+    this.resend = new Resend(process.env.RESEND_API_KEY);
     this.fromEmail = process.env.FROM_EMAIL || 'noreply@gridspace.com';
     this.fromName = process.env.FROM_NAME || 'GridSpace';
-  }
-
-  /**
-   * Create nodemailer transporter based on environment variables
-   * @returns {Object} Nodemailer transporter
-   */
-  createTransporter() {
-    // For development, you can use a test account or SMTP
-    if (process.env.NODE_ENV === 'development' && process.env.SMTP_HOST) {
-      return nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: process.env.SMTP_PORT || 587,
-        secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-    }
-
-    // For production, use Gmail, Outlook, or other SMTP service
-    if (process.env.SMTP_SERVICE === 'gmail') {
-      return nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_APP_PASSWORD, // Use App Password for Gmail
-        },
-      });
-    }
-
-    if (process.env.SMTP_SERVICE === 'outlook') {
-      return nodemailer.createTransport({
-        service: 'hotmail',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-    }
-
-    // Generic SMTP configuration
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
   }
 
   /**
@@ -68,19 +16,26 @@ class EmailService {
    */
   async sendOTPEmail(toEmail, otp, userName = 'User') {
     try {
-      const mailOptions = {
-        from: `"${this.fromName}" <${this.fromEmail}>`,
-        to: toEmail,
+      const { data, error } = await this.resend.emails.send({
+        from: `${this.fromName} <${this.fromEmail}>`,
+        to: [toEmail],
         subject: 'Verify Your Email - GridSpace',
         html: this.getOTPEmailTemplate(otp, userName),
         text: this.getOTPEmailTextTemplate(otp, userName),
-      };
+      });
 
-      const result = await this.transporter.sendMail(mailOptions);
+      if (error) {
+        console.error('Error sending OTP email with Resend:', error);
+        return {
+          success: false,
+          error: error.message,
+          message: 'Failed to send OTP email'
+        };
+      }
       
       return {
         success: true,
-        messageId: result.messageId,
+        messageId: data.id,
         message: 'OTP email sent successfully'
       };
     } catch (error) {
@@ -102,19 +57,26 @@ class EmailService {
    */
   async sendPasswordResetEmail(toEmail, resetOtp, userName = 'User') {
     try {
-      const mailOptions = {
-        from: `"${this.fromName}" <${this.fromEmail}>`,
-        to: toEmail,
+      const { data, error } = await this.resend.emails.send({
+        from: `${this.fromName} <${this.fromEmail}>`,
+        to: [toEmail],
         subject: 'Reset Your Password - GridSpace',
         html: this.getPasswordResetEmailTemplate(resetOtp, userName),
         text: this.getPasswordResetEmailTextTemplate(resetOtp, userName),
-      };
+      });
 
-      const result = await this.transporter.sendMail(mailOptions);
+      if (error) {
+        console.error('Error sending password reset email with Resend:', error);
+        return {
+          success: false,
+          error: error.message,
+          message: 'Failed to send password reset email'
+        };
+      }
       
       return {
         success: true,
-        messageId: result.messageId,
+        messageId: data.id,
         message: 'Password reset email sent successfully'
       };
     } catch (error) {
@@ -128,22 +90,31 @@ class EmailService {
   }
 
   /**
-   * Test email configuration
+   * Test email configuration (Resend does not have a direct 'verify' method like Nodemailer)
    * @returns {Promise<Object>} Test result
    */
   async testConnection() {
     try {
-      await this.transporter.verify();
-      return {
-        success: true,
-        message: 'Email configuration is valid'
-      };
+      // For Resend, a successful send operation implies a valid connection.
+      // We can attempt a dummy send or rely on the API key being valid.
+      // For now, we'll just return success if the API key is present.
+      if (process.env.RESEND_API_KEY) {
+        return {
+          success: true,
+          message: 'Resend API key is configured'
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Resend API key is not configured'
+        };
+      }
     } catch (error) {
-      console.error('Email configuration test failed:', error);
+      console.error('Resend connection test failed:', error);
       return {
         success: false,
         error: error.message,
-        message: 'Email configuration test failed'
+        message: 'Resend connection test failed'
       };
     }
   }

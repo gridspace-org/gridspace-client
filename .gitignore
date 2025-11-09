@@ -34,3 +34,5 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+server/doc/
+!server/ADMIN_API_DOCUMENTATION.md

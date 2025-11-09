@@ -6,6 +6,10 @@ import {
   rescheduleBookingValidation 
 } from '../validators/booking.validator.js';
 import logger from '../config/logger.js';
+import {
+  getUserBookingsService,
+  getHostBookingsService
+} from '../services/bookings/booking.service.js';
 
 // ===== PREVIOUSLY IMPLEMENTED =====
 export const createBooking = async (req, res) => {
@@ -21,97 +25,48 @@ export const createBooking = async (req, res) => {
 export const getUserBookings = async (req, res) => {
   const startTime = Date.now();
   const { userId } = req.user;
-  
+
   try {
     logMethodEntry('getUserBookings', { userId, query: req.query });
 
-    // ===== QUERY VALIDATION =====
     const { page = 1, limit = 10, status } = req.query;
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
 
-    // Validate status filter against allowed values
     if (status && !['pending', 'upcoming', 'in_progress', 'completed', 'cancelled'].includes(status)) {
       return res.status(400).json(formatErrorResponse('Invalid status filter'));
     }
 
-    // ===== BUILD QUERY FILTER =====
-    const filter = { userId, isActive: true };
-    if (status) filter.status = status;
+    const data = await getUserBookingsService({
+      userId,
+      status,
+      page,
+      limit,
+    });
 
-    logger.debug('Fetching user bookings', { userId, filter, pageNum, limitNum });
-
-    // ===== EXECUTE PAGINATED QUERY =====
-    // Uses mongoose-paginate-v2 for efficient pagination
-    const options = {
-      page: pageNum,
-      limit: limitNum,
-      sort: { createdAt: -1 }, // Most recent first
-      populate: {
-        path: 'spaceId',
-        select: 'title location images amenities capacity pricePerHour'
-      },
-      lean: true // Better performance for read operations
-    };
-
-    const result = await Booking.paginate(filter, options);
-
-    // ===== FORMAT RESPONSE FOR UI =====
-    const formattedBookings = result.docs.map(booking => ({
-      _id: booking._id,
-      space: {
-        _id: booking.spaceId._id,
-        title: booking.spaceId.title,
-        location: booking.spaceId.location,
-        images: booking.spaceId.images,
-        amenities: booking.spaceId.amenities
-      },
-      date: booking.formattedDate,        // Virtual field: "June 22nd, 2025"
-      time: booking.formattedTime,        // Virtual field: "9:00 AM to 4:00 PM"
-      price: booking.totalAmount,         // "N10,000"
-      guestCount: booking.guestCount,     // "Number of Guests: 4"
-      status: booking.status,             // "upcoming", "pending", etc.
-      paymentStatus: booking.paymentStatus,
-      canReschedule: booking.canReschedule, // Virtual field
-      canCancel: booking.canCancel         // Virtual field
-    }));
-
-    // ===== SUCCESS RESPONSE =====
     const responseTime = Date.now() - startTime;
     logger.info('User bookings retrieved successfully', {
       userId,
-      totalBookings: result.totalDocs,
-      page: result.page,
-      responseTime: `${responseTime}ms`
+      totalBookings: data.pagination.totalBookings,
+      page: data.pagination.currentPage,
+      responseTime: `${responseTime}ms`,
     });
 
     res.status(200).json({
       success: true,
       message: 'Bookings retrieved successfully',
-      data: {
-        bookings: formattedBookings,
-        pagination: {
-          currentPage: result.page,
-          totalPages: result.totalPages,
-          totalBookings: result.totalDocs,
-          hasNextPage: result.hasNextPage,
-          hasPrevPage: result.hasPrevPage
-        }
-      }
+      data,
     });
-
   } catch (error) {
     const responseTime = Date.now() - startTime;
     logger.error('Failed to retrieve user bookings', {
       error: error.message,
       userId,
-      responseTime: `${responseTime}ms`
+      responseTime: `${responseTime}ms`,
     });
 
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve bookings',
-      error: process.env.NODE_ENV === 'production' ? undefined : error.message
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message,
     });
   }
 };
@@ -128,115 +83,41 @@ export const getHostBookings = async (req, res) => {
   try {
     logMethodEntry('getHostBookings', { hostId, query: req.query });
 
-    // ===== QUERY VALIDATION =====
     const { page = 1, limit = 10, spaceId, status } = req.query;
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
 
-    // ===== VERIFY HOST OWNS THE SPACE =====
-    if (spaceId) {
-      const space = await Space.findOne({ _id: spaceId, hostId });
-      if (!space) {
-        logger.warn('Host does not own requested space', { hostId, spaceId });
-        return res.status(403).json(formatErrorResponse('Access denied to space bookings'));
-      }
-    }
+    const data = await getHostBookingsService({
+      hostId,
+      status,
+      spaceId,
+      page,
+      limit,
+    });
 
-    // ===== BUILD QUERY FILTER =====
-    // Get all spaces owned by this host
-    const hostSpaces = await Space.find({ hostId }).select('_id');
-    const spaceIds = hostSpaces.map(space => space._id);
-
-    const filter = { 
-      spaceId: { $in: spaceIds },
-      isActive: true 
-    };
-
-    // Apply filters if provided
-    if (spaceId) filter.spaceId = spaceId;
-    if (status) filter.status = status;
-
-    logger.debug('Fetching host bookings', { hostId, filter, pageNum, limitNum });
-
-    // ===== EXECUTE PAGINATED QUERY =====
-    const options = {
-      page: pageNum,
-      limit: limitNum,
-      sort: { startTime: 1 }, // Chronological order
-      populate: [
-        {
-          path: 'spaceId',
-          select: 'title location'
-        },
-        {
-          path: 'userId',
-          select: 'fullname email profilePic'
-        }
-      ],
-      lean: true
-    };
-
-    const result = await Booking.paginate(filter, options);
-
-    // ===== FORMAT RESPONSE FOR HOST DASHBOARD =====
-    const formattedBookings = result.docs.map(booking => ({
-      _id: booking._id,
-      user: {
-        _id: booking.userId._id,
-        fullname: booking.userId.fullname,
-        email: booking.userId.email,
-        profilePic: booking.userId.profilePic
-      },
-      space: {
-        _id: booking.spaceId._id,
-        title: booking.spaceId.title,
-        location: booking.spaceId.location
-      },
-      date: booking.formattedDate,
-      time: booking.formattedTime,
-      guestCount: booking.guestCount,
-      totalAmount: booking.totalAmount,
-      hostEarnings: booking.hostEarnings,
-      status: booking.status,
-      paymentStatus: booking.paymentStatus,
-      specialRequests: booking.specialRequests
-    }));
-
-    // ===== SUCCESS RESPONSE =====
     const responseTime = Date.now() - startTime;
     logger.info('Host bookings retrieved successfully', {
       hostId,
-      totalBookings: result.totalDocs,
-      responseTime: `${responseTime}ms`
+      totalBookings: data.pagination.totalBookings,
+      responseTime: `${responseTime}ms`,
     });
 
     res.status(200).json({
       success: true,
       message: 'Host bookings retrieved successfully',
-      data: {
-        bookings: formattedBookings,
-        pagination: {
-          currentPage: result.page,
-          totalPages: result.totalPages,
-          totalBookings: result.totalDocs,
-          hasNextPage: result.hasNextPage,
-          hasPrevPage: result.hasPrevPage
-        }
-      }
+      data,
     });
-
   } catch (error) {
     const responseTime = Date.now() - startTime;
     logger.error('Failed to retrieve host bookings', {
       error: error.message,
       hostId,
-      responseTime: `${responseTime}ms`
+      responseTime: `${responseTime}ms`,
     });
 
-    res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
       success: false,
-      message: 'Failed to retrieve host bookings',
-      error: process.env.NODE_ENV === 'production' ? undefined : error.message
+      message: statusCode === 500 ? 'Failed to retrieve host bookings' : error.message,
+      ...(statusCode === 500 && process.env.NODE_ENV !== 'production' ? { error: error.message } : {}),
     });
   }
 };
