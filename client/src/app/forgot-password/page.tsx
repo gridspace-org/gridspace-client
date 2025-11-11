@@ -13,7 +13,6 @@ export default function ForgotPasswordPage() {
 
   // Clear any existing reset data when component mounts
   useEffect(() => {
-    localStorage.removeItem("resetToken");
     localStorage.removeItem("resetEmail");
   }, []);
 
@@ -24,9 +23,8 @@ export default function ForgotPasswordPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await api.requestPasswordReset(email);
-      // Store token and email for OTP verification and resending
-      localStorage.setItem("resetToken", response.resetToken);
+      await api.requestPasswordReset(email);
+      // Store email for OTP verification
       localStorage.setItem("resetEmail", email);
       // Redirect to OTP verification page
       router.push("/forgot-password/verify-otp");

@@ -102,33 +102,34 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
     throw new AppError('Authentication required', 401);
   }
 
-  const { role, bio, company, phoneNumber, location } = req.body;
+  const { role, location } = req.body;
+  let purposes = req.body.purposes;
+  
+  // Parse purposes if it's a JSON string (from FormData)
+  if (typeof purposes === 'string') {
+    try {
+      purposes = JSON.parse(purposes);
+    } catch (error) {
+      throw new AppError('Invalid purposes format', 400);
+    }
+  }
   
   // Basic validation
   if (!role) {
     throw new AppError('Role is required for onboarding', 400);
   }
 
-  const validRoles = ['user', 'host'];
+  const validRoles = ['user', 'host', 'admin'];
   if (!validRoles.includes(role)) {
-    throw new AppError('Invalid role. Must be one of: user, host', 400);
-  }
-
-  // Host-specific validations
-  if (role === 'host') {
-    if (!bio || !location || !phoneNumber) {
-      throw new AppError('Bio, location, and phone number are required for host onboarding', 400);
-    }
+    throw new AppError('Invalid role. Must be one of: user, host, admin', 400);
   }
 
   // Prepare update data
   const updateData = {
     role: role.trim(),
     onboardingCompleted: true,
-    ...(bio && { bio: bio.trim() }),
-    ...(company && { company: company.trim() }),
-    ...(phoneNumber && { phoneNumber: phoneNumber.trim() }),
-    ...(location && { location: location.trim() })
+    ...(location && { location: location.trim() }),
+    ...(purposes && Array.isArray(purposes) && purposes.length > 0 && { purposes })
   };
 
   // Handle profile picture upload if provided
@@ -136,7 +137,6 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
     try {
       updateData.profilePic = await uploadProfileImage(req.file);
     } catch (error) {
-      logger.error('Error uploading profile picture:', error);
       throw new AppError('Failed to upload profile picture', 500);
     }
   }
@@ -150,12 +150,6 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
 
   if (!updatedUser) {
     throw new AppError('User not found', 404);
-  }
-
-  // If this is a host, we might want to create a default host profile
-  if (role === 'host') {
-    // Here you could add logic to create/update a host profile
-    // For example: await createOrUpdateHostProfile(updatedUser._id, { bio, company });
   }
 
   res.status(200).json({

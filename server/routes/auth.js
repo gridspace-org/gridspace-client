@@ -21,7 +21,7 @@ import {
   refreshToken,
   deleteAccount
 } from '../controllers/auth/index.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, optionalAuth } from '../middleware/auth.js';
 import upload from '../config/multer.js';
 import validate from '../middleware/validate.js';
 import { signupSchema, signinSchema, requestPasswordResetSchema, resetPasswordSchema, verifyEmailSchema, changePasswordSchema, requestEmailVerificationSchema, resendEmailVerificationSchema, verifyPasswordResetOtpSchema, googleAuthSchema, updateProfileSchema, completeOnboardingSchema, deleteAccountSchema } from '../validators/auth.validator.js';
@@ -433,24 +433,18 @@ router.put("/profile", authenticate, upload.single("profilePic"), validate(updat
  *             properties:
  *               role:
  *                 type: string
- *                 enum: [user, host]
- *                 description: User role (user or host)
- *               bio:
+ *                 enum: [user, host, admin]
+ *                 description: User role (user, host, or admin)
+ *               purposes:
  *                 type: string
- *                 description: Host bio (required if role is host)
- *               company:
+ *                 description: JSON stringified array of purposes (e.g., ["remote-work", "study"])
+ *               location:
  *                 type: string
- *                 description: Company name (optional for hosts)
- *               phoneNumber:
- *                 type: string
- *                 description: Contact number (required if role is host)
+ *                 description: User's location/city (optional)
  *               profilePic:
  *                 type: string
  *                 format: binary
  *                 description: Profile picture (optional)
- *               location:
- *                 type: string
- *                 description: Physical location/address (required if role is host)
  *     responses:
  *       200:
  *         description: Onboarding completed successfully
@@ -504,13 +498,11 @@ router.put("/change-password", authenticate, validate(changePasswordSchema), cha
  *   post:
  *     summary: Logout authenticated user
  *     tags: [Auth]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Logged out successfully
  */
-router.post("/logout", authenticate, logout);
+router.post("/logout", optionalAuth, logout);
 
 /**
  * @swagger
@@ -518,13 +510,11 @@ router.post("/logout", authenticate, logout);
  *   post:
  *     summary: Refresh an authentication token
  *     tags: [Auth]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Token refreshed
  */
-router.post("/refresh-token", authenticate, refreshToken);
+router.post("/refresh-token", refreshToken);
 
 /**
  * @swagger

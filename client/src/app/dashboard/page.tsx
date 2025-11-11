@@ -126,7 +126,7 @@ export default function DashboardPage() {
                 name="Urban Coworking Hub"
                 location="Victoria Island, Lagos"
                 rating={4.75}
-                price="₦5000/day"
+                price="₦5000/hr"
               /> */}
             </div>
           </div>

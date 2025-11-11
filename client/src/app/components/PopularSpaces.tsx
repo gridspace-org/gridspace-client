@@ -52,7 +52,7 @@ const SpaceCard = ({
         </p>
       </div>
       <p className="font-inter font-semibold text-[16px] md:text-[20px] leading-[20px] md:leading-[24px] text-[var(--color-secondary)]">
-        {price}/day
+        {price}/hr
       </p>
     </div>
   </div>

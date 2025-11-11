@@ -88,7 +88,7 @@ export default function ListingsPage() {
     name: space.title,
     location: space.location,
     status: space.isActive ? "Completed" : "Pending",
-    dailyRate: `₦${space.pricePerHour.toLocaleString()}/day`,
+    dailyRate: `₦${space.pricePerHour.toLocaleString()}/hr`,
     ratingText: "4.5 (120 reviews)", // This would come from reviews API
     type: space.purposes[0] || "Shared Desk",
     capacity: `${space.capacity} People`,

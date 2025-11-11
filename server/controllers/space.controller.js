@@ -10,27 +10,16 @@ import cloudinary from '../config/cloudinary.js';
  */
 export const createSpace = async (req, res) => {
   try {
-  // The request may be multipart/form-data (uploaded files). Some clients may send
-  // file-related fields in req.body (e.g., "images" or "timeSlots") which are
-  // not part of the Joi create schema (or are expected to be handled via files).
-  // Strip those before validation to avoid "unknown" field errors.
-  const bodyToValidate = { ...req.body };
-  delete bodyToValidate.images;
-  delete bodyToValidate.timeSlots;
-
-  // Validate request body
-  const { error, value } = createSpaceValidation.validate(bodyToValidate);
-    if (error) {
-      logger.warn('Space creation validation failed', {
-        userId: req.user._id,
-        errors: error.details
-      });
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: error.details.map(detail => detail.message)
-      });
-    }
+  // Log the raw request body for debugging
+  logger.info('Creating space - received data:', { 
+    body: req.body, 
+    filesCount: req.files?.length,
+    hasAmenities: !!req.body.amenities,
+    hasPurposes: !!req.body.purposes 
+  });
+  
+  // Body has already been validated and normalized by the validate middleware
+  const value = req.body;
 
     // Check if user is a verified host
     if (req.user.role !== 'host') {

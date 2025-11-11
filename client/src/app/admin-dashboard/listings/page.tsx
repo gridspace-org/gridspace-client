@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Eye, Check, X, Building2 } from "lucide-react";
+import { ArrowRight, Eye, Check, X, Building2, Search } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import adminApiService, { Space } from "@/services/adminApi";
@@ -13,10 +13,12 @@ export default function ListingsPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<'pending' | 'approved' | 'rejected' | ''>('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchSpaces();
-  }, [currentPage]);
+  }, [currentPage, statusFilter]);
 
   const fetchSpaces = async () => {
     try {
@@ -25,6 +27,8 @@ export default function ListingsPage() {
       const response = await adminApiService.getSpaces({
         page: currentPage,
         limit: 10,
+        ...(statusFilter && { status: statusFilter }),
+        ...(searchQuery && { search: searchQuery }),
       });
       setSpaces(response.data.spaces);
       setTotalPages(response.data.pagination.totalPages);
@@ -75,19 +79,66 @@ export default function ListingsPage() {
     return parts.length > 0 ? parts.join(', ') : location.address || 'Unknown';
   };
 
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchSpaces();
+  };
+
+  const handleStatusFilterChange = (status: 'pending' | 'approved' | 'rejected' | '') => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+  };
+
   return (
     <section className="flex flex-col items-start gap-4 md:gap-6 w-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between gap-2 md:gap-[24px] w-full overflow-x-auto">
-        <div className="flex items-center gap-2 md:gap-6">
-          <ArrowRight className="w-6 h-6 text-[#121212] rotate-180" />
-          <div className="flex flex-col gap-1">
-            <h2 className="text-[20px] md:text-[32px] leading-[24px] md:leading-[39px] font-bold text-[#002F5B]">
-              Listing Management
-            </h2>
-            <p className="text-[14px] md:text-[18px] leading-[17px] md:leading-[22px] tracking-[-0.25px] text-[#686767]">
-              Review and moderate host listings
-            </p>
+      <div className="flex flex-col gap-4 w-full">
+        <div className="flex items-center justify-between gap-2 md:gap-[24px] w-full overflow-x-auto">
+          <div className="flex items-center gap-2 md:gap-6">
+            <ArrowRight className="w-6 h-6 text-[#121212] rotate-180" />
+            <div className="flex flex-col gap-1">
+              <h2 className="text-[20px] md:text-[32px] leading-[24px] md:leading-[39px] font-bold text-[#002F5B]">
+                Listing Management
+              </h2>
+              <p className="text-[14px] md:text-[18px] leading-[17px] md:leading-[22px] tracking-[-0.25px] text-[#686767]">
+                Review and moderate host listings
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3 w-full">
+          <div className="flex-1">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search by space name or host..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="w-full px-4 py-2 pr-10 border border-[#D1D5DB] rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-[#002F5B]"
+              />
+              <button
+                onClick={handleSearch}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded"
+                aria-label="Search"
+              >
+                <Search className="w-4 h-4 text-[#686767]" />
+              </button>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <select
+              value={statusFilter}
+              onChange={(e) => handleStatusFilterChange(e.target.value as any)}
+              className="px-4 py-2 border border-[#D1D5DB] rounded-lg text-[14px] bg-white focus:outline-none focus:ring-2 focus:ring-[#002F5B] min-w-[140px]"
+            >
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
           </div>
         </div>
       </div>
@@ -253,8 +304,8 @@ export default function ListingsPage() {
                   <span className="text-[16px] font-medium text-[#121212]">{getLocationDisplay(selected.location)}</span>
                 </div>
                 <div className="flex flex-col gap-1 min-w-[67px]">
-                  <span className="text-[14px] text-[#686767] tracking-[-0.25px]">Daily Rate</span>
-                  <span className="text-[16px] font-semibold text-[#002F5B]">₦{selected.pricePerDay?.toLocaleString() || 'N/A'}</span>
+                  <span className="text-[14px] text-[#686767] tracking-[-0.25px]">Hourly Rate</span>
+                  <span className="text-[16px] font-semibold text-[#002F5B]">₦{selected.pricePerHour?.toLocaleString() || 'N/A'}/hr</span>
                 </div>
               </div>
 

@@ -191,33 +191,41 @@ router.get('/', searchLimiter, getSpaces);
  *       404:
  *         description: Space not found
  */
-router.get('/my/spaces', requireRole('host'), getMySpaces);
-
-/**
- * @swagger
- * /api/v1/spaces/{id}:
- *   get:
- *     summary: Retrieve details of a specific space
- *     tags: [Spaces]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Space ID
- *     responses:
- *       200:
- *         description: Space details
- *       404:
- *         description: Space not found
- */
 router.get('/:id', getSpace);
 
 // Protected routes - require authentication
 router.use(authenticate);
 
 // Host-only routes
+
+/**
+ * @swagger
+ * /api/v1/spaces/my/spaces:
+ *   get:
+ *     summary: Get my spaces (host only)
+ *     tags: [Spaces]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         default: 10
+ *     responses:
+ *       200:
+ *         description: List of host's spaces
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - not a host
+ */
+router.get('/my/spaces', requireRole('host'), getMySpaces);
 
 /**
  * @swagger

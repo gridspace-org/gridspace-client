@@ -88,7 +88,7 @@ export const setTokenCookies = (res, accessToken, refreshToken) => {
     secure: isProduction,
     sameSite: isProduction ? 'strict' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    path: '/api/v1/auth/refresh-token'
+    path: '/'
   });
 };
 
@@ -109,7 +109,7 @@ export const clearTokenCookies = (res) => {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'strict' : 'lax',
-    path: '/api/v1/auth/refresh-token'
+    path: '/'
   });
 };
 

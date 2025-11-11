@@ -33,6 +33,7 @@ export interface Space {
     email: string;
   };
   images?: string[];
+  pricePerHour?: number;
   pricePerDay?: number;
   description?: string;
   amenities?: string[];
@@ -135,6 +136,7 @@ class AdminApiService {
   constructor() {
     this.axiosInstance = axios.create({
       baseURL: API_BASE_URL,
+      withCredentials: true, // Always include cookies for refresh token
       headers: {
         'Content-Type': 'application/json',
       },
@@ -149,10 +151,12 @@ class AdminApiService {
       return config;
     });
 
-    // Add response interceptor for error handling
+    // Add response interceptor for token refresh and error handling
     this.axiosInstance.interceptors.response.use(
       (response) => response,
-      (error) => {
+      async (error) => {
+        const originalRequest = error.config;
+        
         console.error("Admin API Error:", {
           status: error.response?.status,
           statusText: error.response?.statusText,
@@ -160,6 +164,41 @@ class AdminApiService {
           data: error.response?.data,
           message: error.message,
         });
+        
+        // Check if error is 401 and we haven't already tried to refresh
+        // AND the failed request is not the refresh-token endpoint itself
+        if (
+          error.response?.status === 401 && 
+          !originalRequest._retry &&
+          !originalRequest.url?.includes('/auth/refresh-token')
+        ) {
+          originalRequest._retry = true;
+          
+          try {
+            // Try to refresh the token
+            const response = await this.axiosInstance.post('/auth/refresh-token', {}, {
+              _skipAuthRefresh: true // Custom flag to skip interceptor on this request
+            } as any);
+            const newToken = response.data?.data?.accessToken;
+            
+            if (newToken) {
+              // Update token in localStorage
+              localStorage.setItem('authToken', newToken);
+              
+              // Update the authorization header
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              
+              // Retry the original request with new token
+              return this.axiosInstance(originalRequest);
+            }
+          } catch (refreshError) {
+            // Refresh failed - clear auth
+            console.error('Token refresh failed:', refreshError);
+            localStorage.removeItem('authToken');
+            return Promise.reject(refreshError);
+          }
+        }
+        
         return Promise.reject(error);
       }
     );

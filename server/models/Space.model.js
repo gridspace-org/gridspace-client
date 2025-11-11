@@ -42,6 +42,16 @@ const spaceSchema = new mongoose.Schema({
     min: [500, "Minimum price per hour is ₦500"],
     max: [50000, "Maximum price per hour is ₦50,000"]
   },
+  pricePerDay: {
+    type: Number,
+    min: [500, "Minimum price per day is ₦500"],
+    max: [500000, "Maximum price per day is ₦500,000"]
+  },
+  pricePerWeek: {
+    type: Number,
+    min: [500, "Minimum price per week is ₦500"],
+    max: [2000000, "Maximum price per week is ₦2,000,000"]
+  },
 
   // ===== MEDIA =====
   images: {
@@ -92,12 +102,12 @@ const spaceSchema = new mongoose.Schema({
     startTime: {
       type: String,
       required: true,
-      match: /^([01]\\d|2[0-3]):([0-5]\\d)$/ // HH:MM format
+      match: /^([01]\d|2[0-3]):([0-5]\d)$/ // HH:MM format
     },
     endTime: {
       type: String,
       required: true,
-      match: /^([01]\\d|2[0-3]):([0-5]\\d)$/ // HH:MM format
+      match: /^([01]\d|2[0-3]):([0-5]\d)$/ // HH:MM format
     }
   }],
 

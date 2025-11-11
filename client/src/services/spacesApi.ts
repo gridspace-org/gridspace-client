@@ -6,6 +6,8 @@ export interface Space {
   location: string;
   address?: string;
   pricePerHour: number;
+  pricePerDay?: number;
+  pricePerWeek?: number;
   capacity: number;
   images: string[];
   amenities: string[];
@@ -15,6 +17,7 @@ export interface Space {
     fullname: string;
     profilePic?: string;
     emailVerified: boolean;
+    createdAt: string;
   };
   isActive: boolean;
   createdAt: string;
@@ -57,6 +60,8 @@ export interface CreateSpaceRequest {
   location: string;
   address?: string;
   pricePerHour: number;
+  pricePerDay?: number;
+  pricePerWeek?: number;
   capacity: number;
   purposes: string[];
   amenities: string[];
@@ -69,6 +74,8 @@ export interface UpdateSpaceRequest {
   location?: string;
   address?: string;
   pricePerHour?: number;
+  pricePerDay?: number;
+  pricePerWeek?: number;
   capacity?: number;
   purposes?: string[];
   amenities?: string[];
@@ -90,7 +97,8 @@ class SpacesApiService {
 
   private async makeRequest<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    skipRefresh: boolean = false
   ): Promise<T> {
     const token = await this.getAuthToken();
     // If body is FormData, do not set Content-Type (browser will set the multipart boundary)
@@ -98,6 +106,7 @@ class SpacesApiService {
 
     const config: RequestInit = {
       ...options,
+      credentials: 'include', // Always include cookies for refresh token
       headers: {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(token && { Authorization: `Bearer ${token}` }),
@@ -105,11 +114,53 @@ class SpacesApiService {
       },
     };
 
-    const response = await fetch(`${this.baseUrl}${endpoint}`, config);
+    let response = await fetch(`${this.baseUrl}${endpoint}`, config);
+    
+    // If 401 unauthorized and not already trying to refresh, try to refresh token and retry
+    if (response.status === 401 && !skipRefresh && !endpoint.includes('/auth/refresh-token')) {
+      try {
+        // Try to refresh the token
+        const refreshResponse = await fetch(`${this.baseUrl}/auth/refresh-token`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+          const newToken = refreshData?.data?.accessToken;
+          
+          if (newToken) {
+            // Update token in localStorage
+            localStorage.setItem('authToken', newToken);
+            
+            // Retry the original request with new token
+            config.headers = {
+              ...config.headers,
+              Authorization: `Bearer ${newToken}`,
+            };
+            
+            response = await fetch(`${this.baseUrl}${endpoint}`, config);
+          }
+        } else {
+          // Refresh failed - clear auth
+          localStorage.removeItem('authToken');
+        }
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        localStorage.removeItem('authToken');
+      }
+    }
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      console.error('API Error Details:', errorData);
+      const errorMessage = errorData.errors 
+        ? `Validation Error: ${Array.isArray(errorData.errors) ? errorData.errors.join(', ') : errorData.errors}`
+        : (errorData.message || `HTTP error! status: ${response.status}`);
+      throw new Error(errorMessage);
     }
 
     return response.json();
@@ -133,8 +184,12 @@ class SpacesApiService {
     if (params.priceMin) searchParams.append('priceMin', params.priceMin.toString());
     if (params.priceMax) searchParams.append('priceMax', params.priceMax.toString());
     if (params.capacity) searchParams.append('capacity', params.capacity.toString());
-    if (params.purposes) searchParams.append('purposes', params.purposes.join(','));
-    if (params.amenities) searchParams.append('amenities', params.amenities.join(','));
+    if (params.purposes && params.purposes.length > 0) {
+      searchParams.append('purposes', params.purposes.join(','));
+    }
+    if (params.amenities && params.amenities.length > 0) {
+      searchParams.append('amenities', params.amenities.join(','));
+    }
     if (params.page) searchParams.append('page', params.page.toString());
     if (params.limit) searchParams.append('limit', params.limit.toString());
     if (params.sortBy) searchParams.append('sortBy', params.sortBy);

@@ -79,12 +79,14 @@ class BookingsApiService {
 
   private async makeRequest<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    skipRefresh: boolean = false
   ): Promise<T> {
     const token = await this.getAuthToken();
     
     const config: RequestInit = {
       ...options,
+      credentials: 'include', // Always include cookies for refresh token
       headers: {
         'Content-Type': 'application/json',
         ...(token && { Authorization: `Bearer ${token}` }),
@@ -92,7 +94,45 @@ class BookingsApiService {
       },
     };
 
-    const response = await fetch(`${this.baseUrl}${endpoint}`, config);
+    let response = await fetch(`${this.baseUrl}${endpoint}`, config);
+    
+    // If 401 unauthorized and not already trying to refresh, try to refresh token and retry
+    if (response.status === 401 && !skipRefresh && !endpoint.includes('/auth/refresh-token')) {
+      try {
+        // Try to refresh the token
+        const refreshResponse = await fetch(`${this.baseUrl}/auth/refresh-token`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+          const newToken = refreshData?.data?.accessToken;
+          
+          if (newToken) {
+            // Update token in localStorage
+            localStorage.setItem('authToken', newToken);
+            
+            // Retry the original request with new token
+            config.headers = {
+              ...config.headers,
+              Authorization: `Bearer ${newToken}`,
+            };
+            
+            response = await fetch(`${this.baseUrl}${endpoint}`, config);
+          }
+        } else {
+          // Refresh failed - clear auth
+          localStorage.removeItem('authToken');
+        }
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        localStorage.removeItem('authToken');
+      }
+    }
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

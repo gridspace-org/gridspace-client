@@ -71,33 +71,79 @@ export default function UsersPage() {
     return role;
   };
 
+  const handleRoleFilterChange = (role: 'user' | 'host' | 'admin' | 'all') => {
+    setSelectedRole(role);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (status: 'active' | 'suspended' | 'all') => {
+    setSelectedStatus(status);
+    setCurrentPage(1);
+  };
+
   return (
     <section className="flex flex-col items-start gap-6 w-full">
       {/* Header row */}
-      <div className="flex items-center justify-between gap-6 w-full">
-        <div className="flex items-center gap-6">
-          <div className="w-6 h-6 grid place-items-center rotate-180">
-            {/* Back arrow visual (matches figma sizing) */}
-            <div className="w-6 h-6 rounded" />
+      <div className="flex flex-col gap-4 w-full">
+        <div className="flex items-center justify-between gap-6 w-full">
+          <div className="flex items-center gap-6">
+            <div className="w-6 h-6 grid place-items-center rotate-180">
+              {/* Back arrow visual (matches figma sizing) */}
+              <div className="w-6 h-6 rounded" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <h1 className="text-[20px] md:text-[32px] leading-[24px] md:leading-[39px] font-bold text-[#002F5B]">Users Management</h1>
+              <p className="text-[14px] md:text-[18px] leading-[17px] md:leading-[22px] tracking-[-0.25px] text-[#686767]">
+                Manage Host and Guest accounts and permissions
+              </p>
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <h1 className="text-[20px] md:text-[32px] leading-[24px] md:leading-[39px] font-bold text-[#002F5B]">Users Management</h1>
-            <p className="text-[14px] md:text-[18px] leading-[17px] md:leading-[22px] tracking-[-0.25px] text-[#686767]">
-              Manage Host and Guest accounts and permissions
-            </p>
+
+          {/* Filters - Desktop */}
+          <div className="hidden md:flex items-center gap-4">
+            <select
+              value={selectedRole}
+              onChange={(e) => handleRoleFilterChange(e.target.value as any)}
+              className="flex items-center justify-between gap-[95px] w-[208px] h-[50px] px-2.5 border border-[#D8D8D9] rounded-[8px] bg-white text-[16px] text-[#121212] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#002F5B]"
+            >
+              <option value="all">All Types</option>
+              <option value="user">Guest</option>
+              <option value="host">Host</option>
+              <option value="admin">Admin</option>
+            </select>
+            <select
+              value={selectedStatus}
+              onChange={(e) => handleStatusFilterChange(e.target.value as any)}
+              className="flex items-center justify-between gap-[75px] w-[208px] h-[50px] px-2.5 border border-[#D8D8D9] rounded-[8px] bg-white text-[16px] text-[#121212] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#002F5B]"
+            >
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="hidden md:flex items-center gap-4">
-          <div className="flex items-center justify-between gap-[95px] w-[208px] h-[50px] px-2.5 border border-[#D8D8D9] rounded-[8px] bg-white">
-            <span className="text-[16px] text-[#121212]">All Types</span>
-            <ChevronDown className="w-6 h-6 text-[#121212]" />
-          </div>
-          <div className="flex items-center justify-between gap-[75px] w-[208px] h-[50px] px-2.5 border border-[#D8D8D9] rounded-[8px] bg-white">
-            <span className="text-[16px] text-[#121212]">All Statuses</span>
-            <ChevronDown className="w-6 h-6 text-[#121212]" />
-          </div>
+        {/* Filters - Mobile */}
+        <div className="flex md:hidden gap-3 w-full">
+          <select
+            value={selectedRole}
+            onChange={(e) => handleRoleFilterChange(e.target.value as any)}
+            className="flex-1 px-4 py-2 border border-[#D8D8D9] rounded-lg bg-white text-[14px] text-[#121212] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#002F5B]"
+          >
+            <option value="all">All Types</option>
+            <option value="user">Guest</option>
+            <option value="host">Host</option>
+            <option value="admin">Admin</option>
+          </select>
+          <select
+            value={selectedStatus}
+            onChange={(e) => handleStatusFilterChange(e.target.value as any)}
+            className="flex-1 px-4 py-2 border border-[#D8D8D9] rounded-lg bg-white text-[14px] text-[#121212] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#002F5B]"
+          >
+            <option value="all">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+          </select>
         </div>
       </div>
 

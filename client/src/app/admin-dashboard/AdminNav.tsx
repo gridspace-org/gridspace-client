@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Search, Bell, Filter, Home, Users, Calendar, BookOpen, LogOut } from "lucide-react";
+import apiService from "@/services/api";
 
 interface AdminNavProps {
   userName: string;
@@ -13,7 +15,9 @@ interface AdminNavProps {
 
 export default function AdminNav({ userName, adminSince, profilePic }: AdminNavProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -35,6 +39,20 @@ export default function AdminNav({ userName, adminSince, profilePic }: AdminNavP
       document.removeEventListener("keydown", handleEscape);
     };
   }, [isMenuOpen]);
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await apiService.logout();
+      localStorage.removeItem('authToken');
+      router.push('/signin');
+    } catch (error) {
+      console.error('Logout error:', error);
+      alert('Failed to logout. Please try again.');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <div className="py-3 md:py-4 w-full">
@@ -61,7 +79,7 @@ export default function AdminNav({ userName, adminSince, profilePic }: AdminNavP
 
           {/* Right Section */}
           <div className="flex items-center gap-2 md:gap-3 relative" ref={menuRef}>
-            <div className="w-8 h-8 md:w-[49px] md:h-[49px] bg-[#E7E7E7] rounded-full flex items-center justify-center">
+            <div className="w-8 h-8 min-w-[32px] min-h-[32px] md:w-[49px] md:h-[49px] md:min-w-[49px] md:min-h-[49px] bg-[#E7E7E7] rounded-full flex items-center justify-center shrink-0">
               <Bell className="w-4 h-4 md:w-7 md:h-7 text-[#121212]" />
           </div>
             <div className="flex items-center gap-2 md:gap-[8px]">
@@ -70,7 +88,7 @@ export default function AdminNav({ userName, adminSince, profilePic }: AdminNavP
                 aria-haspopup="menu"
                 aria-expanded={isMenuOpen}
                 onClick={() => setIsMenuOpen((prev) => !prev)}
-                className="min-w-10 min-h-10 w-10 h-10 md:w-[70px] md:h-[70px] md:min-w-[70px] md:min-h-[70px] bg-gray-200 rounded-full overflow-hidden"
+                className="min-w-[40px] min-h-[40px] w-10 h-10 md:w-[70px] md:h-[70px] md:min-w-[70px] md:min-h-[70px] bg-gray-200 rounded-full overflow-hidden shrink-0"
                 aria-label="Open profile menu"
               >
                 {profilePic ? (
@@ -86,12 +104,12 @@ export default function AdminNav({ userName, adminSince, profilePic }: AdminNavP
                 <span className="text-[10px] md:text-[12px] text-[#686767] leading-[13px] md:leading-[15px]">Admin since {adminSince}</span>
               </div>
 
-              {/* Mobile dropdown menu */}
+              {/* Dropdown menu - Accessible on all screen sizes */}
               {isMenuOpen && (
-                <div role="menu" aria-label="Admin Sidebar" className="absolute right-0 top-12 block md:hidden z-50 w-[188px] bg-white rounded-lg p-3 shadow-xl">
+                <div role="menu" aria-label="Admin Sidebar" className="absolute right-0 top-12 md:top-16 z-50 w-[188px] bg-white rounded-lg p-3 shadow-xl">
                   {/* Header */}
                   <div className="flex flex-row items-center gap-1.5 px-[10px] h-10 mb-2">
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                    <div className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-full overflow-hidden bg-gray-200 flex items-center justify-center shrink-0">
               {profilePic ? (
                         <Image src={profilePic} alt={`${userName}'s profile`} width={40} height={40} className="w-full h-full object-cover" />
                       ) : (
@@ -127,9 +145,16 @@ export default function AdminNav({ userName, adminSince, profilePic }: AdminNavP
                       <span className="text-[14px] leading-[17px] font-medium">Blog</span>
                     </Link>
 
-                    <button className="flex flex-row items-center gap-3 px-4 h-8 text-[#121212] rounded-md hover:bg-[#F3F4F6] text-left mt-1" onClick={() => setIsMenuOpen(false)} aria-label="Log out">
+                    <button 
+                      className="flex flex-row items-center gap-3 px-4 h-8 text-[#121212] rounded-md hover:bg-[#F3F4F6] text-left mt-1 disabled:opacity-50 disabled:cursor-not-allowed" 
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      aria-label="Log out"
+                    >
                       <LogOut className="w-[18px] h-[18px] text-[#DC2626]" />
-                      <span className="text-[14px] leading-[17px] font-medium">Log Out</span>
+                      <span className="text-[14px] leading-[17px] font-medium">
+                        {isLoggingOut ? 'Logging out...' : 'Log Out'}
+                      </span>
                     </button>
                   </div>
                 </div>

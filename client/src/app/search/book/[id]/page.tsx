@@ -77,9 +77,9 @@ export default function BookingPage() {
 
   const calculateTotal = () => {
     if (!space) return 0;
-    const basePrice = space.pricePerHour;
-    const serviceFee = Math.round(basePrice * 0.05); // 5% service fee
-    return basePrice + serviceFee;
+    const rate = bookingData.pricingType === 'hourly' ? space.pricePerHour : (space.pricePerDay || space.pricePerHour * 8);
+    const serviceFee = Math.round(rate * 0.05); // 5% service fee
+    return rate + serviceFee;
   };
 
   const handleBookNow = async () => {
@@ -115,6 +115,10 @@ export default function BookingPage() {
       console.error('Error creating booking:', error);
       alert('Failed to create booking. Please try again.');
     }
+  };
+
+  const getHostSinceYear = (createdAt: string) => {
+    return new Date(createdAt).getFullYear();
   };
 
   if (loading) {
@@ -219,7 +223,7 @@ export default function BookingPage() {
                       </div>
                     </div>
                     <p className="text-[#686767] text-xs">Responds within an hour</p>
-                    <p className="text-[#686767] text-xs">Host since 2022</p>
+                    <p className="text-[#686767] text-xs">Host since {getHostSinceYear(space.hostId.createdAt)}</p>
                   </div>
                 </div>
                 <button className="flex items-center gap-2 px-4 py-3 border border-[#F25417] rounded-lg text-[#F25417] font-semibold hover:bg-[#F25417] hover:text-white transition-colors">
@@ -236,7 +240,9 @@ export default function BookingPage() {
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-1">
                   <MapPin className="w-6 h-6 text-[#686767]" />
-                  <span className="text-[#686767] text-base">{space.location} 1km</span>
+                  <span className="text-[#686767] text-base">{space.location} 
+                    {/* 1km */}
+                    </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Star className="w-6 h-6 text-[#F25417]" fill="#F25417" />
@@ -380,7 +386,7 @@ export default function BookingPage() {
                 </div>
                 <div className="text-center">
                   <span className="text-[#002F5B] text-3xl font-semibold">
-                    ₦{space.pricePerHour.toLocaleString()}/{bookingData.pricingType === 'hourly' ? 'hour' : 'day'}
+                    ₦{(bookingData.pricingType === 'hourly' ? space.pricePerHour : (space.pricePerDay || space.pricePerHour * 8)).toLocaleString()}/{bookingData.pricingType === 'hourly' ? 'hr' : 'day'}
                   </span>
                 </div>
               </div>
@@ -460,11 +466,11 @@ export default function BookingPage() {
                       <span className="text-[#121212] text-sm">
                         Workspace Fee x 1 {bookingData.pricingType === 'hourly' ? 'hour' : 'day'}
                       </span>
-                      <span className="text-[#121212] text-sm">₦{space.pricePerHour.toLocaleString()}</span>
+                      <span className="text-[#121212] text-sm">₦{(bookingData.pricingType === 'hourly' ? space.pricePerHour : (space.pricePerDay || space.pricePerHour * 8)).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[#121212] text-sm">Service Fee</span>
-                      <span className="text-[#121212] text-sm">₦{Math.round(space.pricePerHour * 0.05).toLocaleString()}</span>
+                      <span className="text-[#121212] text-sm">₦{Math.round((bookingData.pricingType === 'hourly' ? space.pricePerHour : (space.pricePerDay || space.pricePerHour * 8)) * 0.05).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between border-t border-[#999797] pt-2">
                       <span className="text-[#002F5B] text-xl font-semibold">Total</span>

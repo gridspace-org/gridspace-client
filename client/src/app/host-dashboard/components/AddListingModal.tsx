@@ -107,6 +107,35 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
     "4:00PM", "5:00PM", "6:00PM", "7:00PM"
   ];
 
+  // Convert 12-hour time to 24-hour format for backend (HH:MM)
+  const convertTo24Hour = (time12: string): string => {
+    const match = time12.match(/(\d+):(\d+)(AM|PM)/);
+    if (!match) return time12; // fallback
+    
+    let hour = parseInt(match[1]);
+    const minutes = match[2];
+    const period = match[3];
+    
+    if (period === 'PM' && hour !== 12) {
+      hour += 12;
+    } else if (period === 'AM' && hour === 12) {
+      hour = 0;
+    }
+    
+    return `${hour.toString().padStart(2, '0')}:${minutes}`;
+  };
+
+  // Map day abbreviations to full lowercase day names for backend
+  const dayMapping: { [key: string]: string } = {
+    'Mon': 'monday',
+    'Tue': 'tuesday',
+    'Wed': 'wednesday',
+    'Thu': 'thursday',
+    'Fri': 'friday',
+    'Sat': 'saturday',
+    'Sun': 'sunday'
+  };
+
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -360,6 +389,8 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
           fd.append('location', formData.location);
           if (formData.fullAddress) fd.append('address', formData.fullAddress);
           fd.append('pricePerHour', String(parseInt(formData.hourlyRate || '0')));
+          if (formData.dailyRate) fd.append('pricePerDay', String(parseInt(formData.dailyRate || '0')));
+          if (formData.weeklyDiscount) fd.append('pricePerWeek', String(parseInt(formData.weeklyDiscount || '0')));
           fd.append('capacity', String(parseInt(formData.capacity || '0')));
 
           // purposes (spaceType) - backend expects array of strings
@@ -377,9 +408,17 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
             if (p.file) fd.append('images', p.file, p.file.name || `image_${idx}`);
           });
 
-          // Note: the server createSpace validator doesn't accept timeSlots in the request body.
-          // Availability/time slots should be set using the update endpoint or a dedicated availability API.
-          // Therefore we intentionally do NOT append `timeSlots` here to avoid validation errors.
+          // Add timeSlots - convert available days and times to backend format
+          const timeSlotsData = formData.availableDays.map(day => ({
+            day: dayMapping[day],
+            startTime: convertTo24Hour(formData.startTime),
+            endTime: convertTo24Hour(formData.endTime)
+          }));
+          
+          // Append timeSlots as JSON string
+          if (timeSlotsData.length > 0) {
+            fd.append('timeSlots', JSON.stringify(timeSlotsData));
+          }
 
           // Submit FormData to API
           await spacesApi.createSpace(fd);
@@ -682,11 +721,19 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
                   Start Time
                 </label>
                 <div className="relative">
-                  <div className="flex items-center gap-2 h-12 px-3 border border-[#D1D5DB] rounded-lg">
+                  <select
+                    value={formData.startTime}
+                    onChange={(e) => handleInputChange("startTime", e.target.value)}
+                    className="w-full h-12 pl-10 pr-10 border border-[#D1D5DB] rounded-lg text-[#686767] focus:outline-none focus:ring-2 focus:ring-[#002F5B] appearance-none cursor-pointer"
+                  >
+                    {timeSlots.map((time) => (
+                      <option key={time} value={time}>{time}</option>
+                    ))}
+                  </select>
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
                     <Clock className="w-6 h-6 text-[#686767]" />
-                    <span className="text-[#686767]">{formData.startTime}</span>
-                    <ChevronDown className="w-6 h-6 text-[#686767] ml-auto" />
                   </div>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-6 h-6 text-[#686767] pointer-events-none" />
                 </div>
               </div>
               <div className="flex-1">
@@ -694,11 +741,19 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
                   End Time
                 </label>
                 <div className="relative">
-                  <div className="flex items-center gap-2 h-12 px-3 border border-[#D1D5DB] rounded-lg">
+                  <select
+                    value={formData.endTime}
+                    onChange={(e) => handleInputChange("endTime", e.target.value)}
+                    className="w-full h-12 pl-10 pr-10 border border-[#D1D5DB] rounded-lg text-[#686767] focus:outline-none focus:ring-2 focus:ring-[#002F5B] appearance-none cursor-pointer"
+                  >
+                    {timeSlots.map((time) => (
+                      <option key={time} value={time}>{time}</option>
+                    ))}
+                  </select>
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
                     <Clock className="w-6 h-6 text-[#686767]" />
-                    <span className="text-[#686767]">{formData.endTime}</span>
-                    <ChevronDown className="w-6 h-6 text-[#686767] ml-auto" />
                   </div>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-6 h-6 text-[#686767] pointer-events-none" />
                 </div>
               </div>
             </div>
@@ -888,17 +943,17 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
           ) : currentStep === 4 ? (
             /* Step 4: Pricing */
             <div className="space-y-6">
-              {/* Hourly and Daily Rates */}
+              {/* Hourly, Daily, and Weekly Rates */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
                   <label className="block text-lg font-semibold text-[#002F5B] mb-2">
-                    Set Hourly Rate (₦)
+                    Hourly Rate (₦)
                   </label>
                   <input
                     type="number"
                     value={formData.hourlyRate}
                     onChange={(e) => handleInputChange("hourlyRate", e.target.value)}
-                    placeholder="600"
+                    placeholder=""
                     className={`w-full h-12 px-3 border rounded-lg text-[#686767] focus:outline-none focus:ring-2 focus:ring-[#002F5B] ${
                       errors.hourlyRate ? 'border-red-500' : 'border-[#D1D5DB]'
                     }`}
@@ -915,7 +970,7 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
                     type="number"
                     value={formData.dailyRate}
                     onChange={(e) => handleInputChange("dailyRate", e.target.value)}
-                    placeholder="5000"
+                    placeholder=""
                     className={`w-full h-12 px-3 border rounded-lg text-[#686767] focus:outline-none focus:ring-2 focus:ring-[#002F5B] ${
                       errors.dailyRate ? 'border-red-500' : 'border-[#D1D5DB]'
                     }`}
@@ -924,10 +979,27 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
                     <p className="text-red-500 text-sm mt-1">{errors.dailyRate}</p>
                   )}
                 </div>
+                <div className="flex-1">
+                  <label className="block text-lg font-semibold text-[#002F5B] mb-2">
+                    Weekly Rate (₦)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.weeklyDiscount}
+                    onChange={(e) => handleInputChange("weeklyDiscount", e.target.value)}
+                    placeholder=""
+                    className={`w-full h-12 px-3 border rounded-lg text-[#686767] focus:outline-none focus:ring-2 focus:ring-[#002F5B] ${
+                      errors.weeklyDiscount ? 'border-red-500' : 'border-[#D1D5DB]'
+                    }`}
+                  />
+                  {errors.weeklyDiscount && (
+                    <p className="text-red-500 text-sm mt-1">{errors.weeklyDiscount}</p>
+                  )}
+                </div>
               </div>
 
-              {/* Bulk Booking Discounts Section */}
-              <div className="space-y-4">
+              {/* Bulk Booking Discounts Section - Commented Out */}
+              {/* <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-[#002F5B]">
                   Bulk Booking Discounts
                 </h3>
@@ -968,7 +1040,7 @@ export default function AddListingModal({ isOpen, onClose }: AddListingModalProp
                     )}
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
           ) : currentStep === 5 ? (
             /* Step 5: Availability Schedule */

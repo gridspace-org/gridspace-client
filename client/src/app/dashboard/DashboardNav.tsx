@@ -158,7 +158,7 @@ export default function DashboardNav({
                 >
                   {/* Header block */}
                   <div className="flex flex-row items-center gap-1.5 px-[10px] h-10 mb-2">
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                    <div className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-full overflow-hidden bg-gray-200 flex items-center justify-center shrink-0">
                       {profilePic ? (
                         <Image
                           src={profilePic}

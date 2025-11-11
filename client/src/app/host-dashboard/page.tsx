@@ -64,7 +64,7 @@ export default function HostDashboardPage() {
     id: space._id,
     name: space.title,
     location: space.location,
-    price: `₦${space.pricePerHour.toLocaleString()}`,
+    price: `₦${space.pricePerHour.toLocaleString()}/hr`,
     status: space.isActive ? "Completed" : "Pending",
     statusColor: space.isActive ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800",
     createdDate: `Created ${new Date(space.createdAt).toLocaleDateString('en-US', { 

@@ -3,7 +3,7 @@ import { Resend } from 'resend';
 class EmailService {
   constructor() {
     this.resend = new Resend(process.env.RESEND_API_KEY);
-    this.fromEmail = process.env.FROM_EMAIL || 'noreply@gridspace.com';
+    this.fromEmail = process.env.FROM_EMAIL || 'noreply@gridspace.com.ng';
     this.fromName = process.env.FROM_NAME || 'GridSpace';
   }
 

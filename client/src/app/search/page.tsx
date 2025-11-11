@@ -46,7 +46,7 @@ export default function SearchPage() {
     date: "",
     time: "",
     guests: "",
-    priceMin: 5000,
+    priceMin: 1000,
     priceMax: 15000,
     spaceTypes: [],
     amenities: [],
@@ -54,16 +54,34 @@ export default function SearchPage() {
     ratings: []
   });
 
-  // Fetch spaces on component mount
+  // Parse URL search params on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const location = searchParams.get('location');
+      const date = searchParams.get('date');
+      
+      if (location || date) {
+        setFilters(prev => ({
+          ...prev,
+          ...(location && { location }),
+          ...(date && { date })
+        }));
+      }
+    }
+  }, []);
+
+  // Fetch spaces on component mount or when filters change
   useEffect(() => {
     const fetchSpaces = async () => {
       try {
         setLoading(true);
         setError(null);
         const response = await spacesApi.getSpaces({
-          location: filters.location || undefined,
+          location: filters.location.trim().length >= 2 ? filters.location.trim() : undefined,
           priceMin: filters.priceMin,
           priceMax: filters.priceMax,
+          capacity: filters.guests ? parseInt(filters.guests) : undefined,
           purposes: filters.spaceTypes.length > 0 ? filters.spaceTypes : undefined,
           amenities: filters.amenities.length > 0 ? filters.amenities : undefined,
           limit: 12
@@ -78,10 +96,15 @@ export default function SearchPage() {
     };
 
     fetchSpaces();
-  }, [filters]);
+  }, [filters.location, filters.priceMin, filters.priceMax, filters.guests, filters.spaceTypes, filters.amenities]);
 
   const handleFilterChange = (key: keyof SearchFilters, value: string | number | string[] | number[]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSearch = () => {
+    // Trigger search by updating filters which will trigger useEffect
+    setFilters(prev => ({ ...prev }));
   };
 
   const clearFilters = () => {
@@ -90,7 +113,7 @@ export default function SearchPage() {
       date: "",
       time: "",
       guests: "",
-      priceMin: 5000,
+      priceMin: 1000,
       priceMax: 15000,
       spaceTypes: [],
       amenities: [],
@@ -100,20 +123,24 @@ export default function SearchPage() {
   };
 
   const spaceTypes = [
-    "Private Office",
-    "Shared Space", 
-    "Meeting room",
-    "Conference room",
-    "Outdoor Space"
+    'Remote Work', 'Study Session', 'Team Meetings', 
+    'Networking', 'Presentations', 'Creative Work',
+    'Interview', 'Training', 'Client Meeting'
   ];
 
   const amenities = [
     { name: "WiFi", icon: "wifi" },
-    { name: "AV Equipment", icon: "monitor" },
-    { name: "Quiet Zone", icon: "moon" },
+    { name: "Projector", icon: "monitor" },
+    { name: "Whiteboard", icon: "keyboard" },
     { name: "Air Conditioning", icon: "wind" },
+    { name: "Power Backup", icon: "zap" },
     { name: "Parking", icon: "car" },
-    { name: "Coffee & Tea", icon: "coffee" }
+    { name: "Coffee/Tea", icon: "coffee" },
+    { name: "Printer/Scanner", icon: "printer" },
+    { name: "Conference Phone", icon: "phone" },
+    { name: "Monitor", icon: "monitor" },
+    { name: "Kitchen", icon: "building" },
+    { name: "Restroom", icon: "bath" }
   ];
 
   const distanceOptions = [
@@ -129,7 +156,7 @@ export default function SearchPage() {
     <>
       {/* Search Form */}
       <div className="bg-white shadow-[0px_4px_4px_rgba(222,222,222,0.25)] rounded-lg mx-4 md:mx-8 mt-4 p-6">
-        <div className="flex flex-col lg:flex-row items-center gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-end gap-4">
           {/* Location */}
           <div className="w-full lg:w-[233px]">
             <label className="block text-[#002F5B] text-[14px] font-semibold mb-2 font-inter leading-[17px]">
@@ -142,7 +169,7 @@ export default function SearchPage() {
                 placeholder="Enter location or city"
                 value={filters.location}
                 onChange={(e) => handleFilterChange('location', e.target.value)}
-                className="w-full pl-12 pr-4 py-[10px] border border-[#002F5B] rounded-lg text-[12px] leading-[15px] font-inter text-[#A3A3A3] focus:outline-none focus:ring-2 focus:ring-[#F25417]"
+                className="w-full pl-12 pr-4 py-3 border border-[#002F5B] rounded-lg text-[14px] font-inter placeholder:text-[#A3A3A3] focus:outline-none focus:ring-2 focus:ring-[#F25417]"
               />
             </div>
           </div>
@@ -153,15 +180,15 @@ export default function SearchPage() {
               Date
             </label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-6 h-6 text-[#A3A3A3]" />
+              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#A3A3A3]" />
               <input
                 type="text"
                 placeholder="dd/mm/yy"
                 value={filters.date}
                 onChange={(e) => handleFilterChange('date', e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-[#002F5B] rounded-lg text-[16px] focus:outline-none focus:ring-2 focus:ring-[#F25417]"
+                className="w-full pl-12 pr-12 py-3 border border-[#002F5B] rounded-lg text-[14px] placeholder:text-[#A3A3A3] focus:outline-none focus:ring-2 focus:ring-[#F25417]"
               />
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-6 h-6 text-[#A3A3A3]" />
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#A3A3A3]" />
             </div>
           </div>
 
@@ -171,15 +198,15 @@ export default function SearchPage() {
               Time
             </label>
             <div className="relative">
-              <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-6 h-6 text-[#A3A3A3]" />
+              <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#A3A3A3]" />
               <input
                 type="text"
                 placeholder="Time"
                 value={filters.time}
                 onChange={(e) => handleFilterChange('time', e.target.value)}
-                className="w-full pl-12 pr-12 py-3 border border-[#002F5B] rounded-lg text-[16px] focus:outline-none focus:ring-2 focus:ring-[#F25417]"
+                className="w-full pl-12 pr-12 py-3 border border-[#002F5B] rounded-lg text-[14px] placeholder:text-[#A3A3A3] focus:outline-none focus:ring-2 focus:ring-[#F25417]"
               />
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-6 h-6 text-[#A3A3A3]" />
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#A3A3A3]" />
             </div>
           </div>
 
@@ -189,20 +216,23 @@ export default function SearchPage() {
               Guest
             </label>
             <div className="relative">
-              <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 w-6 h-6 text-[#A3A3A3]" />
+              <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#A3A3A3]" />
               <input
                 type="text"
                 placeholder="Guests"
                 value={filters.guests}
                 onChange={(e) => handleFilterChange('guests', e.target.value)}
-                className="w-full pl-12 pr-12 py-3 border border-[#002F5B] rounded-lg text-[16px] focus:outline-none focus:ring-2 focus:ring-[#F25417]"
+                className="w-full pl-12 pr-12 py-3 border border-[#002F5B] rounded-lg text-[14px] placeholder:text-[#A3A3A3] focus:outline-none focus:ring-2 focus:ring-[#F25417]"
               />
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-6 h-6 text-[#A3A3A3]" />
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#A3A3A3]" />
             </div>
           </div>
 
           {/* Search Button */}
-          <button className="w-full lg:w-[120px] h-[50px] bg-[#F25417] text-white rounded-lg font-bold text-base font-inter leading-[19px] hover:bg-[#E0440F] transition-colors">
+          <button 
+            onClick={handleSearch}
+            className="w-full lg:w-[120px] h-[50px] bg-[#F25417] text-white rounded-lg font-bold text-base font-inter leading-[19px] hover:bg-[#E0440F] transition-colors"
+          >
             Find a Space
           </button>
         </div>
@@ -252,8 +282,8 @@ export default function SearchPage() {
             
             {/* Map Button */}
             <button
-              onClick={() => setViewMode('map')}
-              className="hidden md:flex items-center gap-2 px-4 py-3 border border-[#F25417] rounded-lg text-[#F25417] font-semibold hover:bg-[#F25417] hover:text-white transition-colors"
+              disabled
+              className="hidden md:flex items-center gap-2 px-4 py-3 border border-[#D1D5DB] rounded-lg text-[#D1D5DB] font-semibold cursor-not-allowed opacity-60"
             >
               <Map className="w-6 h-6" />
               Map
@@ -627,7 +657,8 @@ export default function SearchPage() {
                       <div className="flex items-center gap-1">
                         <MapPin className="w-[14px] h-[14px] text-[#121212]" />
                         <span className="text-[#121212] text-[11px] leading-[13px] font-inter">
-                          {space.location} 1km
+                          {space.location}
+                           {/* 1km */}
                         </span>
                       </div>
 
@@ -635,7 +666,7 @@ export default function SearchPage() {
                       <div className="flex items-center gap-1">
                         <DollarSign className="w-[14px] h-[14px] text-[#121212]" />
                         <span className="text-[#002F5B] text-[14px] leading-[17px] font-semibold font-inter">
-                          ₦{space.pricePerHour.toLocaleString()}/day
+                          ₦{space.pricePerHour.toLocaleString()}/hr
                         </span>
                       </div>
 

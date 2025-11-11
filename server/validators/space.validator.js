@@ -26,6 +26,16 @@ export const createSpaceValidation = Joi.object({
     'any.required': 'Price per hour is required'
   }),
   
+  pricePerDay: Joi.number().min(500).max(500000).optional().messages({
+    'number.min': 'Price per day must be at least ₦500',
+    'number.max': 'Price per day cannot exceed ₦500,000'
+  }),
+  
+  pricePerWeek: Joi.number().min(500).max(2000000).optional().messages({
+    'number.min': 'Price per week must be at least ₦500',
+    'number.max': 'Price per week cannot exceed ₦2,000,000'
+  }),
+  
   capacity: Joi.number().min(1).max(100).required().messages({
     'number.min': 'Capacity must be at least 1 person',
     'number.max': 'Capacity cannot exceed 100 people',
@@ -51,19 +61,18 @@ export const createSpaceValidation = Joi.object({
   timeSlots: Joi.array().items(
     Joi.object({
       day: Joi.string().valid('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday').required(),
-      startTime: Joi.string().pattern(/^([01]\\d|2[0-3]):([0-5]\\d)$/).required(),
-      endTime: Joi.string().pattern(/^([01]\\d|2[0-3]):([0-5]\\d)$/).required()
+      startTime: Joi.string().pattern(/^([01]\d|2[0-3]):([0-5]\d)$/).required(),
+      endTime: Joi.string().pattern(/^([01]\d|2[0-3]):([0-5]\d)$/).required()
     })
   ).min(1).optional(),
   
-  images: Joi.array().items(Joi.string().uri()).max(5).optional().messages({
-    'array.max': 'Cannot upload more than 5 images',
-    'string.uri': 'Image URLs must be valid'
+  images: Joi.array().items(Joi.string()).max(5).optional().messages({
+    'array.max': 'Cannot upload more than 5 images'
   })
 });
 
 export const updateSpaceValidation = createSpaceValidation.fork(
-  ['title', 'description', 'location', 'pricePerHour', 'capacity'],
+  ['title', 'description', 'location', 'pricePerHour', 'pricePerDay', 'pricePerWeek', 'capacity'],
   (schema) => schema.optional()
 );
 
@@ -72,8 +81,24 @@ export const searchSpacesValidation = Joi.object({
   priceMin: Joi.number().min(0).max(50000).optional(),
   priceMax: Joi.number().min(0).max(50000).optional(),
   capacity: Joi.number().min(1).max(100).optional(),
-  purposes: Joi.array().items(Joi.string()).optional(),
-  amenities: Joi.array().items(Joi.string()).optional(),
+  purposes: Joi.alternatives()
+    .try(
+      Joi.array().items(Joi.string()),
+      Joi.string().custom((value, helpers) => {
+        // Convert comma-separated string to array
+        return value.split(',').map(v => v.trim()).filter(Boolean);
+      })
+    )
+    .optional(),
+  amenities: Joi.alternatives()
+    .try(
+      Joi.array().items(Joi.string()),
+      Joi.string().custom((value, helpers) => {
+        // Convert comma-separated string to array
+        return value.split(',').map(v => v.trim()).filter(Boolean);
+      })
+    )
+    .optional(),
   page: Joi.number().min(1).default(1),
   limit: Joi.number().min(1).max(50).default(12),
   sortBy: Joi.string().valid(

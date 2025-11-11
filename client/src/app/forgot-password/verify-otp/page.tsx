@@ -13,10 +13,10 @@ export default function VerifyOTPPage() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const router = useRouter();
 
-  // Check if we have a resetToken on mount
+  // Check if we have resetEmail on mount
   useEffect(() => {
-    const resetToken = localStorage.getItem("resetToken");
-    if (!resetToken) {
+    const resetEmail = localStorage.getItem("resetEmail");
+    if (!resetEmail) {
       router.push("/forgot-password");
     }
   }, [router]);
@@ -134,6 +134,8 @@ export default function VerifyOTPPage() {
 
                     try {
                       await api.verifyPasswordResetOtp(email, code);
+                      // Store the OTP as resetToken for the password reset step
+                      localStorage.setItem("resetToken", code);
                       router.push("/forgot-password/new-password");
                     } catch (error: unknown) {
                       console.error("Error verifying OTP:", error);
@@ -191,10 +193,9 @@ export default function VerifyOTPPage() {
                   if (!isResending) {
                     setIsResending(true);
                     try {
-                      const response = await api.requestPasswordReset(
+                      await api.requestPasswordReset(
                         localStorage.getItem("resetEmail") || ""
                       );
-                      localStorage.setItem("resetToken", response.resetToken);
                       alert(
                         "A new verification code has been sent to your email."
                       );

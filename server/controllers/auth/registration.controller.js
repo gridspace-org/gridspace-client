@@ -1,7 +1,7 @@
 import User from "../../models/User.model.js";
 import AppError from "../../utils/AppError.js";
 import asyncHandler from "../../utils/asyncHandler.js";
-import { generateToken, uploadProfileImage } from "./auth.utils.js";
+import { generateToken, generateRefreshToken, uploadProfileImage, setTokenCookies } from "./auth.utils.js";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -49,18 +49,35 @@ export const signup = asyncHandler(async (req, res) => {
     profilePic,
   });
 
-  const token = generateToken(user._id);
+  // Generate tokens
+  const accessToken = generateToken(user._id, 'access');
+  const refreshToken = generateRefreshToken();
 
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 24 * 60 * 60 * 1000,
+  // Save refresh token to database
+  user.refreshTokens.push({
+    token: refreshToken.token,
+    expiresAt: refreshToken.expiresAt,
+    userAgent: req.get('user-agent') || 'unknown',
+    ipAddress: req.ip || req.connection.remoteAddress
   });
+  
+  await user.save({ validateBeforeSave: false });
 
+  // Set cookies
+  setTokenCookies(res, accessToken, refreshToken.token);
+
+  // Remove sensitive data from response
+  user.password = undefined;
+  user.refreshTokens = undefined;
+
+  // Send response
   res.status(201).json({
     success: true,
     message: "User created successfully",
-    user,
+    data: {
+      user,
+      accessToken,
+      expiresIn: 15 * 60 // 15 minutes in seconds
+    }
   });
 });

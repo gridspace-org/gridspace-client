@@ -125,7 +125,7 @@ export default function HostListingCard({
             <div className="flex items-center gap-1">
               <DollarSign className="w-3 h-3 text-[#121212]" />
               <span className="text-[14px] font-semibold text-[#002F5B]">
-                {price}/day
+                {price}
               </span>
             </div>
 

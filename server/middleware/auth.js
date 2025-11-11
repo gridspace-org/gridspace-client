@@ -74,6 +74,45 @@ export const protect = asyncHandler(protectMiddleware);
 export const authenticate = protect; // Alias for backward compatibility
 
 /**
+ * @desc    Optional authentication - attach user if token is valid but don't fail if not
+ * @access  Public
+ */
+export const optionalAuth = async (req, res, next) => {
+  let token;
+  
+  // 1) Get token from Authorization header or cookies
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
+  } else if (req.cookies.accessToken) {
+    token = req.cookies.accessToken;
+  }
+
+  // 2) If no token, just continue without user
+  if (!token) {
+    return next();
+  }
+
+  try {
+    // 3) Verify token
+    const decoded = verifyToken(token);
+
+    // 4) Check if user still exists
+    const currentUser = await User.findById(decoded.id).select('+refreshTokens');
+    
+    if (currentUser) {
+      // 5) Attach user to request if found and valid
+      req.user = currentUser;
+      res.locals.user = currentUser;
+    }
+  } catch (error) {
+    // Silently fail - just continue without user
+    logger.debug(`Optional auth failed: ${error.message}`);
+  }
+  
+  next();
+};
+
+/**
  * @desc    Restrict access to specific roles
  * @param   {Array} roles - Array of allowed roles
  * @access  Private
