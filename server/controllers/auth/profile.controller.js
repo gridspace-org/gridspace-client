@@ -1,202 +1,171 @@
-import User from '../../models/User.model.js';
-import AppError from '../../utils/AppError.js';
-import asyncHandler from '../../utils/asyncHandler.js';
-import { uploadProfileImage } from './auth.utils.js';
+import authService from "../../services/auth/auth.service.js";
+import authRepository from "../../repositories/auth.repository.js";
+import logger from "../../config/logger.js";
+import AppError from "../../utils/AppError.js";
+import asyncHandler from "../../utils/asyncHandler.js";
 
+/**
+ * @desc    Get user profile
+ * @route   GET /api/v1/auth/profile
+ * @access  Private
+ */
 export const getProfile = asyncHandler(async (req, res) => {
-  if (!req.user) {
-    throw new AppError('Authentication required', 401);
-  }
+  try {
+    // Use service for profile retrieval
+    const result = await authService.getProfile(req.user._id);
 
-  res.status(200).json({
-    success: true,
-    message: 'Profile retrieved successfully',
-    user: req.user,
-  });
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error("Get profile controller failed", {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?._id,
+    });
+    throw error;
+  }
 });
 
+/**
+ * @desc    Update user profile
+ * @route   PUT /api/v1/auth/profile
+ * @access  Private
+ */
 export const updateProfile = asyncHandler(async (req, res) => {
-  if (!req.user) {
-    throw new AppError('Authentication required', 401);
+  try {
+    // Use service for profile update
+    const result = await authService.updateProfile(req.user._id, req.body);
+
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error("Update profile controller failed", {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?._id,
+      updatedFields: Object.keys(req.body || {}),
+    });
+    throw error;
   }
-
-  const { fullname, phoneNumber } = req.body;
-  const userId = req.user._id;
-
-  if (!fullname && !phoneNumber && !req.file) {
-    throw new AppError('Please provide at least one field to update', 400);
-  }
-
-  const updateData = {};
-
-  if (phoneNumber && phoneNumber !== req.user.phoneNumber) {
-    const normalizedPhone = phoneNumber.trim();
-    const existingPhone = await User.findOne({ phoneNumber: normalizedPhone, _id: { $ne: userId } });
-    if (existingPhone) {
-      throw new AppError('Phone number already exists', 400);
-    }
-    updateData.phoneNumber = normalizedPhone;
-  }
-
-  if (fullname) {
-    updateData.fullname = fullname.trim();
-  }
-
-  if (req.file) {
-    updateData.profilePic = await uploadProfileImage(req.file);
-  }
-
-  const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
-    new: true,
-    runValidators: true,
-  }).select('-password');
-
-  if (!updatedUser) {
-    throw new AppError('User not found', 404);
-  }
-
-  res.status(200).json({
-    success: true,
-    message: 'Profile updated successfully',
-    user: updatedUser,
-  });
 });
 
+/**
+ * @desc    Change user password
+ * @route   PUT /api/v1/auth/change-password
+ * @access  Private
+ */
 export const changePassword = asyncHandler(async (req, res) => {
-  if (!req.user) {
-    throw new AppError('Authentication required', 401);
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      throw new AppError(
+        "Please provide current password and new password",
+        400
+      );
+    }
+
+    // Use service for password change
+    const result = await authService.changePassword(req.user._id, {
+      currentPassword,
+      newPassword,
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error("Change password controller failed", {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?._id,
+    });
+    throw error;
   }
-
-  const { currentPassword, newPassword } = req.body;
-
-  if (!currentPassword || !newPassword) {
-    throw new AppError('Please provide current password and new password', 400);
-  }
-
-  if (newPassword.length < 6) {
-    throw new AppError('New password must be at least 6 characters long', 400);
-  }
-
-  const user = await User.findById(req.user._id);
-
-  if (!user) {
-    throw new AppError('User not found', 404);
-  }
-
-  const isCurrentPasswordValid = await user.comparePassword(currentPassword);
-  if (!isCurrentPasswordValid) {
-    throw new AppError('Current password is incorrect', 400);
-  }
-
-  user.password = newPassword;
-  await user.save();
-
-  res.status(200).json({
-    success: true,
-    message: 'Password changed successfully',
-  });
 });
 
+/**
+ * @desc    Complete user onboarding
+ * @route   POST /api/v1/auth/complete-onboarding
+ * @access  Private
+ */
 export const completeOnboarding = asyncHandler(async (req, res) => {
-  if (!req.user) {
-    throw new AppError('Authentication required', 401);
-  }
+  try {
+    const { fullname, phonenumber, bio, location, role } = req.body;
 
-  const { role, bio, company, phoneNumber, location } = req.body;
-  
-  // Basic validation
-  if (!role) {
-    throw new AppError('Role is required for onboarding', 400);
-  }
-
-  const validRoles = ['user', 'host'];
-  if (!validRoles.includes(role)) {
-    throw new AppError('Invalid role. Must be one of: user, host', 400);
-  }
-
-  // Host-specific validations
-  if (role === 'host') {
-    if (!bio || !location || !phoneNumber) {
-      throw new AppError('Bio, location, and phone number are required for host onboarding', 400);
+    // Validate input
+    if (!fullname) {
+      throw new AppError("Full name is required to complete onboarding", 400);
     }
-  }
 
-  // Prepare update data
-  const updateData = {
-    role: role.trim(),
-    onboardingCompleted: true,
-    ...(bio && { bio: bio.trim() }),
-    ...(company && { company: company.trim() }),
-    ...(phoneNumber && { phoneNumber: phoneNumber.trim() }),
-    ...(location && { location: location.trim() })
-  };
-
-  // Handle profile picture upload if provided
-  if (req.file) {
-    try {
-      updateData.profilePic = await uploadProfileImage(req.file);
-    } catch (error) {
-      logger.error('Error uploading profile picture:', error);
-      throw new AppError('Failed to upload profile picture', 500);
+    // Handle role update separately since updateProfile service filters it out
+    if (role) {
+      await authRepository.updateUserById(req.user._id, { role });
     }
+
+    // Use service for profile update with onboarding completion (excluding role)
+    const result = await authService.updateProfile(req.user._id, {
+      fullname,
+      phonenumber,
+      bio,
+      location,
+    });
+
+    // Update the user data in the response to include the new role
+    if (result.data && result.data.user && role) {
+      result.data.user.role = role;
+    }
+
+    res.status(200).json({
+      ...result,
+      message: "Onboarding completed successfully. Welcome to the platform!",
+    });
+  } catch (error) {
+    logger.error("Complete onboarding controller failed", {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?._id,
+    });
+    throw error;
   }
-
-  // Update user
-  const updatedUser = await User.findByIdAndUpdate(
-    req.user._id,
-    updateData,
-    { new: true, runValidators: true }
-  ).select('-password');
-
-  if (!updatedUser) {
-    throw new AppError('User not found', 404);
-  }
-
-  // If this is a host, we might want to create a default host profile
-  if (role === 'host') {
-    // Here you could add logic to create/update a host profile
-    // For example: await createOrUpdateHostProfile(updatedUser._id, { bio, company });
-  }
-
-  res.status(200).json({
-    success: true,
-    message: 'Onboarding completed successfully',
-    user: updatedUser,
-  });
 });
 
+/**
+ * @desc    Delete user account
+ * @route   DELETE /api/v1/auth/account
+ * @access  Private
+ */
 export const deleteAccount = asyncHandler(async (req, res) => {
-  if (!req.user) {
-    throw new AppError('Authentication required', 401);
+  try {
+    const { password } = req.body;
+
+    // Validate input
+    if (!password) {
+      throw new AppError(
+        "Password confirmation is required to delete account",
+        400
+      );
+    }
+
+    // TODO: Implement account deletion in service
+    // This would involve:
+    // 1. Verify password
+    // 2. Cancel active bookings
+    // 3. Remove from spaces
+    // 4. Delete user record
+    // 5. Clear all tokens
+
+    throw new AppError("Account deletion feature not yet implemented", 501);
+
+    // Send response
+    res.status(200).json({
+      success: true,
+      message:
+        "Account deletion requested. You will receive a confirmation email.",
+    });
+  } catch (error) {
+    logger.error("Delete account controller failed", {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?._id,
+    });
+    throw error;
   }
-
-  const { password } = req.body;
-
-  if (!password) {
-    throw new AppError('Please provide password to confirm account deletion', 400);
-  }
-
-  const user = await User.findById(req.user._id);
-
-  if (!user) {
-    throw new AppError('User not found', 404);
-  }
-
-  const isPasswordValid = await user.comparePassword(password);
-  if (!isPasswordValid) {
-    throw new AppError('Incorrect password', 400);
-  }
-
-  await User.findByIdAndDelete(req.user._id);
-
-  res.clearCookie('token', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
-  });
-
-  res.status(200).json({
-    success: true,
-    message: 'Account deleted successfully',
-  });
 });
