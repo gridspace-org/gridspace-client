@@ -7,7 +7,7 @@ import helmet from 'helmet';
 import logger from './config/logger.js';
 import env from './config/env.js';
 import { swaggerSpec, swaggerUiOptions } from './config/swagger.js';
-import swaggerUi from 'swagger-ui-express';
+// import swaggerUi from 'swagger-ui-express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';

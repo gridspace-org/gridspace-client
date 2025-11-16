@@ -27,7 +27,7 @@ export const useGoogleAuth = (options: UseGoogleAuthOptions = {}) => {
           // Determine redirect path
           let redirectPath = options.redirectTo;
           if (!redirectPath) {
-            if (result.user.onboardingCompleted) {
+            if (result.data.user.onboardingCompleted) {
               redirectPath = "/dashboard";
             } else {
               redirectPath = "/onboarding";

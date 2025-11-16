@@ -8,11 +8,11 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage] = useState(1);
 
   useEffect(() => {
     fetchBookings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
   const fetchBookings = async () => {
@@ -24,7 +24,6 @@ export default function BookingsPage() {
         limit: 10,
       });
       setBookings(response.data.bookings);
-      setTotalPages(response.data.pagination.totalPages);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch bookings');
     } finally {

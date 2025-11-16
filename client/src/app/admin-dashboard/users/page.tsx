@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Eye, Pause, Play, Users as UsersIcon } from "lucide-react";
+import { Eye, Pause, Play, Users as UsersIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import adminApiService, { User } from "@/services/adminApi";
 
@@ -11,17 +11,22 @@ export default function UsersPage() {
   const [selectedRole, setSelectedRole] = useState<'user' | 'host' | 'admin' | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<'active' | 'suspended' | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRole, selectedStatus, currentPage]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
       setError(null);
-      const params: any = {
+      const params: {
+        page: number;
+        limit: number;
+        role?: 'user' | 'host' | 'admin';
+        status?: 'active' | 'suspended';
+      } = {
         page: currentPage,
         limit: 10,
       };
@@ -30,7 +35,6 @@ export default function UsersPage() {
       
       const response = await adminApiService.getUsers(params);
       setUsers(response.data.users);
-      setTotalPages(response.data.pagination.totalPages);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch users');
     } finally {
@@ -103,7 +107,7 @@ export default function UsersPage() {
           <div className="hidden md:flex items-center gap-4">
             <select
               value={selectedRole}
-              onChange={(e) => handleRoleFilterChange(e.target.value as any)}
+              onChange={(e) => handleRoleFilterChange(e.target.value as 'user' | 'host' | 'admin' | 'all')}
               className="flex items-center justify-between gap-[95px] w-[208px] h-[50px] px-2.5 border border-[#D8D8D9] rounded-[8px] bg-white text-[16px] text-[#121212] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#002F5B]"
             >
               <option value="all">All Types</option>
@@ -113,7 +117,7 @@ export default function UsersPage() {
             </select>
             <select
               value={selectedStatus}
-              onChange={(e) => handleStatusFilterChange(e.target.value as any)}
+              onChange={(e) => handleStatusFilterChange(e.target.value as 'active' | 'suspended' | 'all')}
               className="flex items-center justify-between gap-[75px] w-[208px] h-[50px] px-2.5 border border-[#D8D8D9] rounded-[8px] bg-white text-[16px] text-[#121212] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#002F5B]"
             >
               <option value="all">All Statuses</option>
@@ -127,7 +131,7 @@ export default function UsersPage() {
         <div className="flex md:hidden gap-3 w-full">
           <select
             value={selectedRole}
-            onChange={(e) => handleRoleFilterChange(e.target.value as any)}
+            onChange={(e) => handleRoleFilterChange(e.target.value as 'user' | 'host' | 'admin' | 'all')}
             className="flex-1 px-4 py-2 border border-[#D8D8D9] rounded-lg bg-white text-[14px] text-[#121212] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#002F5B]"
           >
             <option value="all">All Types</option>
@@ -137,7 +141,7 @@ export default function UsersPage() {
           </select>
           <select
             value={selectedStatus}
-            onChange={(e) => handleStatusFilterChange(e.target.value as any)}
+            onChange={(e) => handleStatusFilterChange(e.target.value as 'active' | 'suspended' | 'all')}
             className="flex-1 px-4 py-2 border border-[#D8D8D9] rounded-lg bg-white text-[14px] text-[#121212] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#002F5B]"
           >
             <option value="all">All Statuses</option>

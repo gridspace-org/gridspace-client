@@ -178,6 +178,7 @@ class AdminApiService {
             // Try to refresh the token
             const response = await this.axiosInstance.post('/auth/refresh-token', {}, {
               _skipAuthRefresh: true // Custom flag to skip interceptor on this request
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } as any);
             const newToken = response.data?.data?.accessToken;
             

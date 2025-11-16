@@ -11,13 +11,13 @@ export default function ListingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Space | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'pending' | 'approved' | 'rejected' | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchSpaces();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, statusFilter]);
 
   const fetchSpaces = async () => {
@@ -31,7 +31,6 @@ export default function ListingsPage() {
         ...(searchQuery && { search: searchQuery }),
       });
       setSpaces(response.data.spaces);
-      setTotalPages(response.data.pagination.totalPages);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch spaces');
     } finally {
@@ -80,13 +79,11 @@ export default function ListingsPage() {
   };
 
   const handleSearch = () => {
-    setCurrentPage(1);
     fetchSpaces();
   };
 
   const handleStatusFilterChange = (status: 'pending' | 'approved' | 'rejected' | '') => {
     setStatusFilter(status);
-    setCurrentPage(1);
   };
 
   return (
@@ -131,7 +128,7 @@ export default function ListingsPage() {
           <div className="flex gap-2">
             <select
               value={statusFilter}
-              onChange={(e) => handleStatusFilterChange(e.target.value as any)}
+              onChange={(e) => handleStatusFilterChange(e.target.value as 'pending' | 'approved' | 'rejected' | '')}
               className="px-4 py-2 border border-[#D1D5DB] rounded-lg text-[14px] bg-white focus:outline-none focus:ring-2 focus:ring-[#002F5B] min-w-[140px]"
             >
               <option value="">All Status</option>
