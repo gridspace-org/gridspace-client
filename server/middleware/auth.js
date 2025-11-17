@@ -11,6 +11,7 @@ import logger from "../config/logger.js";
  * @access  Private
  */
 const protectMiddleware = async (req, res, next) => {
+  logger.info("Auth middleware called for path:", req.path);
   let token;
 
   // 1) Get token from Authorization header or cookies
