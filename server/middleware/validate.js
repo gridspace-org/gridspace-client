@@ -22,6 +22,11 @@ const validate = (schema) => (req, res, next) => {
   }
 
   // Update req.body with validated values
+  logger.info("Validation middleware updating req.body", {
+    originalBody: req.body,
+    validatedValue: value,
+    hasValue: !!value,
+  });
   req.body = value;
   next();
 };
