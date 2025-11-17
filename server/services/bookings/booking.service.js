@@ -270,7 +270,10 @@ export const getBookingByIdService = async (bookingId, userId, role) => {
  * @returns {Promise<Object>} Created booking
  */
 export const createBookingService = async (bookingData) => {
-  logger.debug("BookingService.createBooking", {
+  logger.debug("BookingService.createBooking START", {
+    bookingData: bookingData,
+    bookingDataType: typeof bookingData,
+    bookingDataKeys: bookingData ? Object.keys(bookingData) : null,
     userId: bookingData?.userId,
     spaceId: bookingData?.spaceId,
     startTime: bookingData?.startTime,
@@ -279,6 +282,7 @@ export const createBookingService = async (bookingData) => {
 
   try {
     if (!bookingData) {
+      logger.error("Booking data is undefined or null");
       throw new AppError("Booking data is required", 400);
     }
 
