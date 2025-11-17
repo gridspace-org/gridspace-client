@@ -332,15 +332,23 @@ export const createBookingService = async (bookingData) => {
 
     // Validate booking data
     if (!userId || !spaceId || !startTime || !endTime) {
+      console.error("Validation failed:", { userId, spaceId, startTime, endTime });
       throw new AppError("Missing required booking data", 400);
     }
 
+    console.error("Validation passed, proceeding with date parsing");
+    
     const startDateTime = new Date(startTime);
     const endDateTime = new Date(endTime);
 
+    console.error("Dates parsed:", { startDateTime, endDateTime });
+
     if (startDateTime >= endDateTime) {
-      throw new AppError("End time must be after start time", 400);
+      console.error("Start date is after end date");
+      throw new AppError("Start time must be before end time", 400);
     }
+
+    console.error("Checking space availability");
 
     if (startDateTime <= new Date()) {
       throw new AppError("Booking must be for a future time", 400);
