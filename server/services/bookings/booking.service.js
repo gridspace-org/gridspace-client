@@ -332,12 +332,17 @@ export const createBookingService = async (bookingData) => {
 
     // Validate booking data
     if (!userId || !spaceId || !startTime || !endTime) {
-      console.error("Validation failed:", { userId, spaceId, startTime, endTime });
+      console.error("Validation failed:", {
+        userId,
+        spaceId,
+        startTime,
+        endTime,
+      });
       throw new AppError("Missing required booking data", 400);
     }
 
     console.error("Validation passed, proceeding with date parsing");
-    
+
     const startDateTime = new Date(startTime);
     const endDateTime = new Date(endTime);
 
