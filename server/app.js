@@ -7,7 +7,7 @@ import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 
 // Import middleware
-import { errorHandler } from "./middleware/errorHandler.js";
+import { errorHandler, errorConverter } from "./middleware/errorHandler.js";
 import asyncHandler from "./utils/asyncHandler.js";
 import sanitizeRequest from "./middleware/sanitize.js";
 import AppError from "./utils/AppError.js";
