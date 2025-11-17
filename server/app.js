@@ -2,7 +2,6 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import morgan from "morgan";
 import mongoSanitize from "@exortek/express-mongo-sanitize";
 import xss from "xss";
 import rateLimit from "express-rate-limit";
