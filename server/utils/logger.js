@@ -1,12 +1,12 @@
-import winston from 'winston';
-import { v4 as uuidv4 } from 'uuid';
+import winston from "winston";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Standardized Logging Utility for GridSpace API
- * 
+ *
  * Provides consistent logging patterns with correlation IDs, structured logging,
  * and standardized log levels across all modules.
- * 
+ *
  * Features:
  * - Correlation ID tracking for request tracing
  * - User ID inclusion in logs for user-specific operations
@@ -19,11 +19,13 @@ import { v4 as uuidv4 } from 'uuid';
 const { combine, timestamp, errors, json, colorize, printf } = winston.format;
 
 // Determine log level based on environment
-const logLevel = process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug');
+const logLevel =
+  process.env.LOG_LEVEL ||
+  (process.env.NODE_ENV === "production" ? "info" : "debug");
 
 // Custom format for console output in development
 const devFormat = printf(({ timestamp, level, message, ...meta }) => {
-  const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
+  const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : "";
   return `${timestamp} [${level}] ${message} ${metaStr}`;
 });
 
@@ -32,54 +34,57 @@ const logger = winston.createLogger({
   level: logLevel,
   format: combine(
     timestamp({
-      format: 'YYYY-MM-DD HH:mm:ss.SSS'
+      format: "YYYY-MM-DD HH:mm:ss.SSS",
     }),
     errors({ stack: true }),
     json()
   ),
   defaultMeta: {
-    service: 'gridspace-api',
-    version: process.env.npm_package_version || '1.0.0',
-    environment: process.env.NODE_ENV || 'development'
+    service: "gridspace-api",
+    version: process.env.npm_package_version || "1.0.0",
+    environment: process.env.NODE_ENV || "development",
   },
   transports: [
     // Console transport for development
     new winston.transports.Console({
-      format: process.env.NODE_ENV === 'production' 
-        ? combine(colorize(), json())
-        : combine(colorize(), devFormat)
+      format:
+        process.env.NODE_ENV === "production"
+          ? combine(colorize(), json())
+          : combine(colorize(), devFormat),
     }),
-    
+
     // File transport for errors in production
-    ...(process.env.NODE_ENV === 'production' ? [
-      new winston.transports.File({
-        filename: 'logs/error.log',
-        level: 'error',
-        maxsize: 5242880, // 5MB
-        maxFiles: 5,
-      }),
-      new winston.transports.File({
-        filename: 'logs/combined.log',
-        maxsize: 5242880, // 5MB
-        maxFiles: 5,
-      })
-    ] : [])
+    ...(process.env.NODE_ENV === "production"
+      ? [
+          new winston.transports.File({
+            filename: "logs/error.log",
+            level: "error",
+            maxsize: 5242880, // 5MB
+            maxFiles: 5,
+          }),
+          new winston.transports.File({
+            filename: "logs/combined.log",
+            maxsize: 5242880, // 5MB
+            maxFiles: 5,
+          }),
+        ]
+      : []),
   ],
-  
+
   // Handle uncaught exceptions and rejections
   exceptionHandlers: [
     new winston.transports.Console(),
-    ...(process.env.NODE_ENV === 'production' ? [
-      new winston.transports.File({ filename: 'logs/exceptions.log' })
-    ] : [])
+    ...(process.env.NODE_ENV === "production"
+      ? [new winston.transports.File({ filename: "logs/exceptions.log" })]
+      : []),
   ],
-  
+
   rejectionHandlers: [
     new winston.transports.Console(),
-    ...(process.env.NODE_ENV === 'production' ? [
-      new winston.transports.File({ filename: 'logs/rejections.log' })
-    ] : [])
-  ]
+    ...(process.env.NODE_ENV === "production"
+      ? [new winston.transports.File({ filename: "logs/rejections.log" })]
+      : []),
+  ],
 });
 
 /**
@@ -89,23 +94,19 @@ const logger = winston.createLogger({
  */
 const extractContext = (req) => {
   const context = {
-    correlationId: req?.headers?.['x-correlation-id'] || 
-                   req?.correlationId || 
-                   uuidv4(),
-    userId: req?.user?._id || 
-            req?.user?.id || 
-            null,
-    sessionId: req?.sessionID || 
-               req?.headers?.['x-session-id'] || 
-               null,
-    ip: req?.ip || 
-        req?.connection?.remoteAddress || 
-        req?.headers?.['x-forwarded-for'] || 
-        'unknown',
-    userAgent: req?.headers?.['user-agent'] || 'unknown',
+    correlationId:
+      req?.headers?.["x-correlation-id"] || req?.correlationId || uuidv4(),
+    userId: req?.user?._id || req?.user?.id || null,
+    sessionId: req?.sessionID || req?.headers?.["x-session-id"] || null,
+    ip:
+      req?.ip ||
+      req?.connection?.remoteAddress ||
+      req?.headers?.["x-forwarded-for"] ||
+      "unknown",
+    userAgent: req?.headers?.["user-agent"] || "unknown",
     method: req?.method,
     url: req?.originalUrl || req?.url,
-    httpVersion: req?.httpVersion
+    httpVersion: req?.httpVersion,
   };
 
   // Attach correlation ID to request for downstream use
@@ -131,10 +132,10 @@ const createChildLogger = (parentLogger, additionalMeta = {}) => {
  */
 export const createLogger = (context = {}) => {
   const baseLogger = createChildLogger(logger, context);
-  
+
   return {
     ...baseLogger,
-    
+
     /**
      * Log method entry with timing
      * @param {string} methodName - Name of the method
@@ -144,10 +145,10 @@ export const createLogger = (context = {}) => {
     methodEntry(methodName, params = {}, req = null) {
       const logContext = req ? extractContext(req) : {};
       this.info(`Method entry: ${methodName}`, {
-        event: 'method_entry',
+        event: "method_entry",
         method: methodName,
         params: sanitizeParams(params),
-        ...logContext
+        ...logContext,
       });
     },
 
@@ -161,11 +162,11 @@ export const createLogger = (context = {}) => {
     methodExit(methodName, result = null, duration = null, req = null) {
       const logContext = req ? extractContext(req) : {};
       this.info(`Method exit: ${methodName}`, {
-        event: 'method_exit',
+        event: "method_exit",
         method: methodName,
         duration: duration ? `${duration}ms` : null,
         resultType: result ? typeof result : null,
-        ...logContext
+        ...logContext,
       });
     },
 
@@ -177,8 +178,8 @@ export const createLogger = (context = {}) => {
      */
     apiRequest(req, res, duration = null) {
       const logContext = extractContext(req);
-      this.info('API Request', {
-        event: 'api_request',
+      this.info("API Request", {
+        event: "api_request",
         method: req.method,
         url: req.originalUrl,
         statusCode: res.statusCode,
@@ -186,7 +187,7 @@ export const createLogger = (context = {}) => {
         ip: logContext.ip,
         userAgent: logContext.userAgent,
         userId: logContext.userId,
-        correlationId: logContext.correlationId
+        correlationId: logContext.correlationId,
       });
     },
 
@@ -199,10 +200,10 @@ export const createLogger = (context = {}) => {
     businessOperation(operation, data = {}, req = null) {
       const logContext = req ? extractContext(req) : {};
       this.info(`Business operation: ${operation}`, {
-        event: 'business_operation',
+        event: "business_operation",
         operation,
         data: sanitizeBusinessData(data),
-        ...logContext
+        ...logContext,
       });
     },
 
@@ -215,10 +216,10 @@ export const createLogger = (context = {}) => {
     security(event, details = {}, req = null) {
       const logContext = req ? extractContext(req) : {};
       this.warn(`Security event: ${event}`, {
-        event: 'security',
+        event: "security",
         securityEvent: event,
         details,
-        ...logContext
+        ...logContext,
       });
     },
 
@@ -232,11 +233,11 @@ export const createLogger = (context = {}) => {
     performance(operation, duration, metadata = {}, req = null) {
       const logContext = req ? extractContext(req) : {};
       this.info(`Performance: ${operation}`, {
-        event: 'performance',
+        event: "performance",
         operation,
         duration: `${duration}ms`,
         ...metadata,
-        ...logContext
+        ...logContext,
       });
     },
 
@@ -253,9 +254,9 @@ export const createLogger = (context = {}) => {
       this[level](message, {
         event,
         ...metadata,
-        ...logContext
+        ...logContext,
       });
-    }
+    },
   };
 };
 
@@ -265,17 +266,26 @@ export const createLogger = (context = {}) => {
  * @returns {Object} Sanitized parameters
  */
 const sanitizeParams = (params) => {
-  if (!params || typeof params !== 'object') {
+  if (!params || typeof params !== "object") {
     return params;
   }
 
-  const sensitiveKeys = ['password', 'token', 'secret', 'key', 'credential', 'auth'];
+  const sensitiveKeys = [
+    "password",
+    "token",
+    "secret",
+    "key",
+    "credential",
+    "auth",
+  ];
   const sanitized = { ...params };
 
   for (const key in sanitized) {
-    if (sensitiveKeys.some(sensitive => key.toLowerCase().includes(sensitive))) {
-      sanitized[key] = '[REDACTED]';
-    } else if (typeof sanitized[key] === 'object') {
+    if (
+      sensitiveKeys.some((sensitive) => key.toLowerCase().includes(sensitive))
+    ) {
+      sanitized[key] = "[REDACTED]";
+    } else if (typeof sanitized[key] === "object") {
       sanitized[key] = sanitizeParams(sanitized[key]);
     }
   }
@@ -292,12 +302,12 @@ const sanitizeBusinessData = (data) => {
   if (!data) return data;
 
   const sanitized = { ...data };
-  
+
   // Remove or mask sensitive business data
   if (sanitized.creditCard) {
     sanitized.creditCard = `****-****-****-${sanitized.creditCard.slice(-4)}`;
   }
-  
+
   if (sanitized.bankAccount) {
     sanitized.bankAccount = `****${sanitized.bankAccount.slice(-4)}`;
   }
@@ -308,15 +318,15 @@ const sanitizeBusinessData = (data) => {
 /**
  * Middleware to add correlation ID to all requests
  * @param {Object} req - Express request object
- * @param {Object} res - Express response object  
+ * @param {Object} res - Express response object
  * @param {Function} next - Next middleware function
  */
 export const correlationIdMiddleware = (req, res, next) => {
-  const correlationId = req.headers['x-correlation-id'] || uuidv4();
-  
+  const correlationId = req.headers["x-correlation-id"] || uuidv4();
+
   req.correlationId = correlationId;
-  res.setHeader('X-Correlation-ID', correlationId);
-  
+  res.setHeader("X-Correlation-ID", correlationId);
+
   next();
 };
 
@@ -328,20 +338,20 @@ export const correlationIdMiddleware = (req, res, next) => {
  */
 export const requestTimingMiddleware = (req, res, next) => {
   const startTime = Date.now();
-  
+
   // Override res.end to log request completion
   const originalEnd = res.end;
-  res.end = function(...args) {
+  res.end = function (...args) {
     const duration = Date.now() - startTime;
-    
+
     // Create logger and log request
     const logger = createLogger();
     logger.apiRequest(req, res, duration);
-    
+
     // Call original end method
     originalEnd.apply(this, args);
   };
-  
+
   next();
 };
 
@@ -355,7 +365,7 @@ export const createModuleLogger = (moduleName, req = null) => {
   const context = req ? extractContext(req) : {};
   return createLogger({
     module: moduleName,
-    ...context
+    ...context,
   });
 };
 
@@ -363,9 +373,4 @@ export const createModuleLogger = (moduleName, req = null) => {
 export default logger;
 
 // Export utility functions
-export {
-  createChildLogger,
-  extractContext,
-  correlationIdMiddleware,
-  requestTimingMiddleware
-};
+export { createChildLogger, extractContext, correlationIdMiddleware };
