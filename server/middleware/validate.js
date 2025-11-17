@@ -1,7 +1,8 @@
 import Joi from "joi";
+import logger from "../utils/logger.js";
 
 const validate = (schema) => (req, res, next) => {
-  console.log("Validate middleware called for path:", req.path);
+  logger.info("Validate middleware called for path:", req.path);
   let dataToValidate = req.body;
 
   // If files are present, add their information to the data to be validated
@@ -25,7 +26,7 @@ const validate = (schema) => (req, res, next) => {
   }
 
   // Update req.body with validated values
-  console.log("Validation middleware:", {
+  logger.info("Validation middleware:", {
     originalBody: req.body,
     validatedValue: value,
     hasValue: !!value,
