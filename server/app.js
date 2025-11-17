@@ -6,6 +6,12 @@ import mongoSanitize from "@exortek/express-mongo-sanitize";
 import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 
+// Import middleware
+import { errorHandler } from "./middleware/errorHandler.js";
+import { asyncHandler } from "./middleware/asyncHandler.js";
+import sanitizeRequest from "./middleware/sanitize.js";
+import AppError from "./utils/appError.js";
+
 import mongoose from "mongoose";
 import logger from "./config/logger.js";
 import env from "./config/env.js";
