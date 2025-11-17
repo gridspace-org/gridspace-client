@@ -17,8 +17,8 @@ import logger from "../../config/logger.js";
  * Creates a new booking with conflict detection and business rule validation
  */
 export const createBooking = async (req, res) => {
-  logger.info("createBooking controller called");
-  logger.info("req.body:", JSON.stringify(req.body, null, 2));
+  console.error("createBooking controller called");
+  console.error("req.body:", JSON.stringify(req.body, null, 2));
   const startTime = Date.now();
   const { _id: userId } = req.user; // Assuming user info is in req.user from auth middleware
 
@@ -46,11 +46,11 @@ export const createBooking = async (req, res) => {
       userId: userId,
     };
 
-    logger.info(
+    console.error(
       "bookingData before service call:",
       JSON.stringify(bookingData, null, 2)
     );
-    logger.info(
+    console.error(
       "req.body keys:",
       req.body ? Object.keys(req.body) : "req.body is undefined"
     );
