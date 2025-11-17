@@ -126,9 +126,20 @@ app.get("/health", (req, res) => {
   const health = getHealthCheck();
   const isHealthy =
     health.database.state === "connected" &&
-    health.memory.heapUsed < healthCheckConfig.memoryThreshold;
+    health.memory.heapUsed < health.memory.heapTotal * 0.9;
 
-  res.status(isHealthy ? 200 : 503).json(health);
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? "ok" : "error",
+    ...health,
+  });
+});
+
+// Test endpoint
+app.get("/test", (req, res) => {
+  res.json({
+    message: "Test endpoint working",
+    timestamp: new Date().toISOString(),
+  });
 });
 
 app.use(cors(corsOptions));
