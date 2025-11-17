@@ -1,17 +1,21 @@
 import "dotenv/config";
 import express from "express";
-import mongoose from "mongoose";
 import cors from "cors";
 import helmet from "helmet";
-import healthcheck from "express-healthcheck";
+import compression from "compression";
+import morgan from "morgan";
+import mongoSanitize from "@exortek/express-mongo-sanitize";
+import xss from "xss";
+import rateLimit from "express-rate-limit";
+import hpp from "hpp";
+import cookieParser from "cookie-parser";
+
+import mongoose from "mongoose";
 import logger from "./config/logger.js";
 import env from "./config/env.js";
 import swaggerUi from "swagger-ui-express";
 import path from "path";
 import { fileURLToPath } from "url";
-import cookieParser from "cookie-parser";
-import sanitizeRequest from "./middleware/sanitize.js";
-import { errorConverter, errorHandler } from "./middleware/errorHandler.js";
 
 import { swaggerSpec, swaggerUiOptions } from "./config/swagger.js";
 import {
@@ -24,6 +28,8 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+console.log("App.js loaded - starting server");
 
 const auditLoginAttempts = (req, res, next) => {
   if (req.method !== "GET" && req.originalUrl.includes("/auth/signin")) {
