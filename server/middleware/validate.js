@@ -1,3 +1,6 @@
+import Joi from "joi";
+import logger from "../utils/logger.js";
+
 const validate = (schema) => (req, res, next) => {
   let dataToValidate = req.body;
 
