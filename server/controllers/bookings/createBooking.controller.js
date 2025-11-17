@@ -18,6 +18,7 @@ import logger from "../../config/logger.js";
  */
 export const createBooking = async (req, res) => {
   console.log("createBooking controller called");
+  console.log("req.body:", JSON.stringify(req.body, null, 2));
   const startTime = Date.now();
   const { _id: userId } = req.user; // Assuming user info is in req.user from auth middleware
 
@@ -44,6 +45,15 @@ export const createBooking = async (req, res) => {
       ...req.body,
       userId: userId,
     };
+
+    console.log(
+      "bookingData before service call:",
+      JSON.stringify(bookingData, null, 2)
+    );
+    console.log(
+      "req.body keys:",
+      req.body ? Object.keys(req.body) : "req.body is undefined"
+    );
 
     logger.info("About to call createBookingService", {
       bookingData,
