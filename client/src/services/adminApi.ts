@@ -128,7 +128,7 @@ export interface RejectSpaceData {
 
 // API Base URL
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://grid-production-cb89.up.railway.app/api";
+  process.env.NEXT_PUBLIC_API_URL || "https://grid-production-cb89.up.railway.app/api/v1";
 
 class AdminApiService {
   private axiosInstance: AxiosInstance;

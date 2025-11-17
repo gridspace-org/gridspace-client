@@ -30,14 +30,14 @@ export default function SignUpPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showLoader, setShowLoader] = useState(false);
-  const [isGoogleFlow] = useState(false);
+  const [isGoogleFlow, setIsGoogleFlow] = useState(false);
 
   // Show loader if authentication is successful
   if (showLoader) {
     return (
       <AuthLoader
         message={isGoogleFlow ? "Signing you in..." : "Creating your account..."}
-        redirectPath={isGoogleFlow ? undefined : "/onboarding"}
+        // Don't pass redirectPath - let AuthLoader determine based on onboarding status
       />
     );
   }
@@ -326,7 +326,10 @@ export default function SignUpPage() {
                   text="Continue with Google"
                   className="flex-1"
                   onError={(error) => setError(error)}
-                  onSuccess={() => setShowLoader(true)}
+                  onSuccess={() => {
+                    setIsGoogleFlow(true);
+                    setShowLoader(true);
+                  }}
                 />
                 <button className="hidden flex-1 h-[56px] sm:h-[60px] px-4 py-3 rounded-lg border border-[var(--color-secondary)] flex items-center justify-center gap-2 transition-all duration-300 hover:bg-gray-100 hover:text-[var(--color-secondary)] hover:shadow-sm">
                   <Image

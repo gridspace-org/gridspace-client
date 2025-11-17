@@ -35,6 +35,9 @@ const securityHeaders = {
       frameSrc: ["'none'"],
     },
   },
+  crossOriginOpenerPolicy: {
+    policy: 'same-origin-allow-popups', // Allow OAuth popups to communicate
+  },
   hsts: {
     maxAge: 31536000, // 1 year in seconds
     includeSubDomains: true,

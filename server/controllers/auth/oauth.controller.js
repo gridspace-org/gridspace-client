@@ -54,7 +54,9 @@ export const googleAuth = asyncHandler(async (req, res) => {
   }
 
   const googleUser = await verifyGoogleToken(idToken);
-  const user = await upsertGoogleUser(googleUser);
+  let user = await upsertGoogleUser(googleUser);
+  // Fetch the complete user object to ensure all fields are included
+  user = await User.findById(user._id).select('-password');
   const token = generateToken(user._id);
 
   setAuthCookie(res, token);
@@ -62,7 +64,11 @@ export const googleAuth = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: user.googleId ? 'Google signin successful' : 'Google signup successful',
-    user,
+    data: {
+      user,
+      accessToken: token,
+      expiresIn: 24 * 60 * 60
+    }
   });
 });
 
@@ -84,7 +90,9 @@ export const googleCallback = asyncHandler(async (req, res) => {
   }
 
   const googleUser = await getTokensFromCode(code);
-  const user = await upsertGoogleUser(googleUser);
+  let user = await upsertGoogleUser(googleUser);
+  // Fetch the complete user object to ensure all fields are included
+  user = await User.findById(user._id).select('-password');
   const token = generateToken(user._id);
 
   setAuthCookie(res, token);

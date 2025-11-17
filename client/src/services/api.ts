@@ -46,9 +46,9 @@ type ApiResponse<T = unknown> = { message?: string } & {
 
 // const API_BASE_URL =
 //   process.env.NEXT_PUBLIC_API_URL ||
-//   "https://gridspace-server.onrender.com/api";
+//   "https://gridspace-server.onrender.com/api/v1";
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://grid-production-cb89.up.railway.app/api";
+  process.env.NEXT_PUBLIC_API_URL || "https://grid-production-cb89.up.railway.app/api/v1";
 
 class ApiService {
   private axiosInstance: AxiosInstance;
