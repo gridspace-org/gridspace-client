@@ -1,5 +1,4 @@
 import Joi from "joi";
-import logger from "../utils/logger.js";
 
 const validate = (schema) => (req, res, next) => {
   let dataToValidate = req.body;
@@ -25,7 +24,7 @@ const validate = (schema) => (req, res, next) => {
   }
 
   // Update req.body with validated values
-  logger.info("Validation middleware updating req.body", {
+  console.log("Validation middleware:", {
     originalBody: req.body,
     validatedValue: value,
     hasValue: !!value,
