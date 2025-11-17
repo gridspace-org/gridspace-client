@@ -371,6 +371,3 @@ export const createModuleLogger = (moduleName, req = null) => {
 
 // Export default logger instance
 export default logger;
-
-// Export utility functions
-export { createChildLogger, extractContext, correlationIdMiddleware };
