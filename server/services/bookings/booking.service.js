@@ -296,6 +296,10 @@ export const createBookingService = async (bookingData) => {
       throw new AppError("Booking data is required", 400);
     }
 
+    console.error("About to destructure bookingData:", JSON.stringify(bookingData, null, 2));
+    console.error("bookingData has spaceId:", 'spaceId' in bookingData);
+    console.error("bookingData.spaceId value:", bookingData.spaceId);
+    
     const {
       userId,
       spaceId,
