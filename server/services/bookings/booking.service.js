@@ -296,19 +296,39 @@ export const createBookingService = async (bookingData) => {
       throw new AppError("Booking data is required", 400);
     }
 
-    console.error("About to destructure bookingData:", JSON.stringify(bookingData, null, 2));
-    console.error("bookingData has spaceId:", 'spaceId' in bookingData);
+    console.error(
+      "About to destructure bookingData:",
+      JSON.stringify(bookingData, null, 2)
+    );
+    console.error("bookingData has spaceId:", "spaceId" in bookingData);
     console.error("bookingData.spaceId value:", bookingData.spaceId);
-    
-    const {
-      userId,
+
+    let userId,
       spaceId,
       startTime,
       endTime,
       guestCount,
       specialRequests,
-      totalAmount,
-    } = bookingData;
+      totalAmount;
+    try {
+      ({
+        userId,
+        spaceId,
+        startTime,
+        endTime,
+        guestCount,
+        specialRequests,
+        totalAmount,
+      } = bookingData);
+      console.error("Destructuring successful!");
+    } catch (err) {
+      console.error("Destructuring failed:", err);
+      console.error(
+        "bookingData at destructuring error:",
+        JSON.stringify(bookingData, null, 2)
+      );
+      throw err;
+    }
 
     // Validate booking data
     if (!userId || !spaceId || !startTime || !endTime) {
