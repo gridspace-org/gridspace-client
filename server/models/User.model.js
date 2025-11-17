@@ -130,6 +130,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  walletId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Wallet'
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -137,8 +141,13 @@ const userSchema = new mongoose.Schema({
   passwordChangedAt: Date,
 });
 
-// Pre-save middleware to hash password
+// Pre-save middleware to hash password and cap refresh tokens
 userSchema.pre("save", async function (next) {
+  // Cap refresh tokens at 5 to prevent document bloat
+  if (this.refreshTokens && this.refreshTokens.length > 5) {
+    this.refreshTokens = this.refreshTokens.slice(-5);
+  }
+
   // Only hash the password if it has been modified (or is new) and exists
   if (!this.isModified("password") || !this.password) return next();
 
@@ -178,5 +187,11 @@ userSchema.methods.toJSON = function () {
   delete userObject.password;
   return userObject;
 };
+
+// Indexes for performance (email, googleId, phonenumber already indexed via unique:true)
+userSchema.index({ role: 1 });
+userSchema.index({ isActive: 1, 'suspension.isSuspended': 1 }); // Compound for common queries
+userSchema.index({ createdAt: -1 }); // For sorting/pagination
+userSchema.index({ 'refreshTokens.expiresAt': 1 }); // For token cleanup
 
 export default mongoose.model("User", userSchema);

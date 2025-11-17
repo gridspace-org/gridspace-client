@@ -4,8 +4,7 @@ const reportSchema = new mongoose.Schema({
   reporterId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: [true, "Reporter ID is required"],
-    index: true
+    required: [true, "Reporter ID is required"]
   },
   reportedSpaceId: {
     type: mongoose.Schema.Types.ObjectId,

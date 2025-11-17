@@ -1,82 +1,34 @@
-import express from 'express';
-import rateLimit from 'express-rate-limit';
-import multer from 'multer';
+import express from "express";
+import rateLimit from "express-rate-limit";
+import multer from "multer";
+import { createSpace } from "../controllers/spaces/createSpace.controller.js";
+import { searchSpaces as getSpaces } from "../controllers/spaces/searchSpaces.controller.js";
 import {
-  createSpace,
-  getSpaces,
-  getSpace,
+  getSpaceDetails as getSpace,
   updateSpace,
   deleteSpace,
-  getMySpaces
-} from '../controllers/space.controller.js';
-import { authenticate } from '../middleware/auth.js';
-import { requireRole } from '../middleware/roles.js';
-import { validateHostSpaceCreation, validateHostSpaceManagement } from '../middleware/hostVerification.js';
-import { checkSpaceExists } from '../middleware/resources.js';
-import { checkSpaceOwnership } from '../middleware/ownership.js';
-import validate from '../middleware/validate.js';
+  getHostSpaces as getMySpaces,
+} from "../controllers/spaces/manageSpaces.controller.js";
+import { authenticate } from "../middleware/auth.js";
+import { requireRole } from "../middleware/roles.js";
+import {
+  validateHostSpaceCreation,
+  validateHostSpaceManagement,
+} from "../middleware/hostVerification.js";
+import { checkSpaceExists } from "../middleware/resources.js";
+import { checkSpaceOwnership } from "../middleware/ownership.js";
+import validate from "../middleware/validate.js";
 import {
   createSpaceValidation,
   updateSpaceValidation,
-} from '../validators/space.validator.js';
+  searchSpacesValidation,
+} from "../validators/space.validator.js";
 
 /**
  * @swagger
  * tags:
  *   name: Spaces
  *   description: Endpoints for browsing and managing spaces
- * 
- * @swagger
- * components:
- *   schemas:
- *     Space:
- *       type: object
- *       properties:
- *         _id:
- *           type: string
- *           description: The auto-generated ID of the space
- *         name:
- *           type: string
- *           description: The name of the space
- *         description:
- *           type: string
- *           description: Detailed description of the space
- *         capacity:
- *           type: number
- *           description: Maximum number of people the space can accommodate
- *         pricePerHour:
- *           type: number
- *           description: Price per hour in the local currency
- *         location:
- *           type: object
- *           properties:
- *             address:
- *               type: string
- *             coordinates:
- *               type: array
- *               items:
- *                 type: number
- *         amenities:
- *           type: array
- *           items:
- *             type: string
- *         images:
- *           type: array
- *           items:
- *             type: string
- *             format: uri
- *         host:
- *           type: string
- *           description: Reference to the User who owns the space
- *         isActive:
- *           type: boolean
- *           default: true
- *         createdAt:
- *           type: string
- *           format: date-time
- *         updatedAt:
- *           type: string
- *           format: date-time
  */
 
 const router = express.Router();
@@ -86,16 +38,16 @@ const upload = multer({
   storage: multer.diskStorage({}),
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit per file
-    files: 5 // Maximum 5 files
+    files: 5, // Maximum 5 files
   },
   fileFilter: (req, file, cb) => {
     // Check if file is an image
-    if (file.mimetype.startsWith('image/')) {
+    if (file.mimetype.startsWith("image/")) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'), false);
+      cb(new Error("Only image files are allowed"), false);
     }
-  }
+  },
 });
 
 // Rate limiting configurations
@@ -104,8 +56,8 @@ const createSpaceLimiter = rateLimit({
   max: 5, // Limit each IP to 5 space creations per windowMs
   message: {
     success: false,
-    message: 'Too many spaces created. Please try again later.'
-  }
+    message: "Too many spaces created. Please try again later.",
+  },
 });
 
 const searchLimiter = rateLimit({
@@ -113,15 +65,15 @@ const searchLimiter = rateLimit({
   max: 60, // Limit each IP to 60 searches per minute
   message: {
     success: false,
-    message: 'Too many search requests. Please slow down.'
-  }
+    message: "Too many search requests. Please slow down.",
+  },
 });
 
 // Public routes
 
 /**
  * @swagger
- * /api/spaces:
+ * /api/v1/spaces:
  *   get:
  *     summary: List spaces with optional filters
  *     tags: [Spaces]
@@ -170,7 +122,24 @@ const searchLimiter = rateLimit({
  *       200:
  *         description: Paginated list of spaces
  */
-router.get('/', searchLimiter, getSpaces);
+router.get(
+  "/",
+  searchLimiter,
+  (req, res, next) => {
+    const { error } = searchSpacesValidation.validate(req.query, {
+      stripUnknown: true,
+    });
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid query parameters",
+        errors: error.details.map((d) => d.message),
+      });
+    }
+    next();
+  },
+  getSpaces
+);
 
 /**
  * @swagger
@@ -191,8 +160,6 @@ router.get('/', searchLimiter, getSpaces);
  *       404:
  *         description: Space not found
  */
-router.get('/my/spaces', requireRole('host'), getMySpaces);
-
 /**
  * @swagger
  * /api/v1/spaces/{id}:
@@ -212,7 +179,34 @@ router.get('/my/spaces', requireRole('host'), getMySpaces);
  *       404:
  *         description: Space not found
  */
-router.get('/:id', getSpace);
+router.get("/:id", getSpace);
+
+/**
+ * @swagger
+ * /api/v1/spaces/my/spaces:
+ *   get:
+ *     summary: Get spaces owned by authenticated host
+ *     tags: [Spaces]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         default: 10
+ *     responses:
+ *       200:
+ *         description: Host spaces retrieved
+ *       403:
+ *         description: Forbidden - host role required
+ */
+router.get("/my/spaces", authenticate, requireRole("host"), getMySpaces);
 
 // Protected routes - require authentication
 router.use(authenticate);
@@ -221,7 +215,7 @@ router.use(authenticate);
 
 /**
  * @swagger
- * /api/spaces:
+ * /api/v1/spaces:
  *   post:
  *     summary: Create a new space (host only)
  *     tags: [Spaces]
@@ -239,6 +233,7 @@ router.use(authenticate);
  *               - location
  *               - pricePerHour
  *               - capacity
+ *               - timeSlots
  *             properties:
  *               title:
  *                 type: string
@@ -248,6 +243,17 @@ router.use(authenticate);
  *                 type: string
  *               pricePerHour:
  *                 type: number
+ *               pricePerDay:
+ *                 type: number
+ *               pricePerWeek:
+ *                 type: number
+ *               pricePerMonth:
+ *                 type: number
+ *               availableBookingTypes:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   enum: [hourly, daily, weekly, monthly]
  *               capacity:
  *                 type: number
  *               purposes:
@@ -258,6 +264,30 @@ router.use(authenticate);
  *                 type: array
  *                 items:
  *                   type: string
+ *               timeSlots:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - day
+ *                     - startTime
+ *                     - endTime
+ *                   properties:
+ *                     day:
+ *                       type: string
+ *                       enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+ *                       description: Day of the week
+ *                     startTime:
+ *                       type: string
+ *                       pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+ *                       description: Start time in 24-hour format (HH:MM)
+ *                       example: '09:00'
+ *                     endTime:
+ *                       type: string
+ *                       pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+ *                       description: End time in 24-hour format (HH:MM)
+ *                       example: '18:00'
+ *                   description: Available time slots for this space
  *               images:
  *                 type: array
  *                 items:
@@ -272,11 +302,11 @@ router.use(authenticate);
  *         description: Unauthorized
  */
 router.post(
-  '/',
+  "/",
   createSpaceLimiter,
-  requireRole('host'),
+  requireRole("host"),
   validateHostSpaceCreation,
-  upload.array('images', 5), // Max 5 images
+  upload.array("images", 5), // Max 5 images
   validate(createSpaceValidation),
   createSpace
 );
@@ -310,6 +340,17 @@ router.post(
  *                 type: string
  *               pricePerHour:
  *                 type: number
+ *               pricePerDay:
+ *                 type: number
+ *               pricePerWeek:
+ *                 type: number
+ *               pricePerMonth:
+ *                 type: number
+ *               availableBookingTypes:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   enum: [hourly, daily, weekly, monthly]
  *               capacity:
  *                 type: number
  *               purposes:
@@ -320,6 +361,30 @@ router.post(
  *                 type: array
  *                 items:
  *                   type: string
+ *               timeSlots:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - day
+ *                     - startTime
+ *                     - endTime
+ *                   properties:
+ *                     day:
+ *                       type: string
+ *                       enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+ *                       description: Day of the week
+ *                     startTime:
+ *                       type: string
+ *                       pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+ *                       description: Start time in 24-hour format (HH:MM)
+ *                       example: '09:00'
+ *                     endTime:
+ *                       type: string
+ *                       pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+ *                       description: End time in 24-hour format (HH:MM)
+ *                       example: '18:00'
+ *                   description: Available time slots for this space
  *               images:
  *                 type: array
  *                 items:
@@ -334,11 +399,11 @@ router.post(
  *         description: Space not found
  */
 router.put(
-  '/:id',
-  requireRole('host'),
+  "/:id",
+  requireRole("host"),
   checkSpaceExists,
   checkSpaceOwnership,
-  upload.array('images', 5),
+  upload.array("images", 5),
   validate(updateSpaceValidation),
   updateSpace
 );
@@ -366,8 +431,8 @@ router.put(
  *         description: Space not found
  */
 router.delete(
-  '/:id',
-  requireRole('host'),
+  "/:id",
+  requireRole("host"),
   checkSpaceExists,
   checkSpaceOwnership,
   deleteSpace

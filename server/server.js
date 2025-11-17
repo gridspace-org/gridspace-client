@@ -10,7 +10,7 @@ const startServer = async () => {
     await connectDB();
     const server = app.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`);
-      logger.info(`📚 API Documentation: http://localhost:${PORT}/api/auth/test`);
+      logger.info(`📚 API Base: http://localhost:${PORT}/api/v1`);
       logger.info(`❤️ Health check: http://localhost:${PORT}/health`);
       logger.info(`📖 Interactive API Docs: http://localhost:${PORT}/api-docs`);
       logger.info(`📄 Swagger JSON Spec: http://localhost:${PORT}/api-docs.json`);

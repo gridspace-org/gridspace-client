@@ -4,14 +4,12 @@ const reviewSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: [true, "User ID is required"],
-    index: true
+    required: [true, "User ID is required"]
   },
   spaceId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Space",
-    required: [true, "Space ID is required"],
-    index: true
+    required: [true, "Space ID is required"]
   },
   bookingId: {
     type: mongoose.Schema.Types.ObjectId,

@@ -468,8 +468,8 @@ export const createBookingService = async (bookingData) => {
     return booking;
   } catch (error) {
     logger.error("Failed to create booking", {
-      userId: bookingData.userId,
-      spaceId: bookingData.spaceId,
+      userId: bookingData?.userId,
+      spaceId: bookingData?.spaceId,
       error: error.message,
     });
 
@@ -477,7 +477,7 @@ export const createBookingService = async (bookingData) => {
       throw error;
     }
 
-    throw new AppError("Failed to create booking", 500);
+    throw new AppError(error.message || "Failed to create booking", 500);
   }
 };
 

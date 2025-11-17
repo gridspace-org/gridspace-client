@@ -1,12 +1,13 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import {
-  createBooking,
-  getUserBookings,
-  getHostBookings,
-  updateBookingStatus,
-  cancelBooking
-} from '../controllers/booking.controller.js';
+  createBooking
+} from '../controllers/bookings/createBooking.controller.js';
+import { getUserBookings } from '../controllers/bookings/getUserBookings.controller.js';
+import { getHostBookings } from '../controllers/bookings/getHostBookings.controller.js';
+import { updateBookingStatus } from '../controllers/bookings/updateBookingStatus.controller.js';
+import { cancelBooking } from '../controllers/bookings/cancelBooking.controller.js';
+import { getBookingById } from '../controllers/bookings/getBookingById.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roles.js';
 import { checkBookingConflicts } from '../middleware/bookingChecks.js';
@@ -21,52 +22,6 @@ import {
  * tags:
  *   name: Bookings
  *   description: Booking lifecycle management endpoints
- * 
- * @swagger
- * components:
- *   schemas:
- *     Booking:
- *       type: object
- *       properties:
- *         _id:
- *           type: string
- *           description: The auto-generated ID of the booking
- *         space:
- *           type: string
- *           description: Reference to the booked Space
- *         user:
- *           type: string
- *           description: Reference to the User who made the booking
- *         startTime:
- *           type: string
- *           format: date-time
- *           description: Start time of the booking
- *         endTime:
- *           type: string
- *           format: date-time
- *           description: End time of the booking
- *         status:
- *           type: string
- *           enum: [pending, confirmed, cancelled, completed]
- *           default: pending
- *         totalPrice:
- *           type: number
- *           description: Total price for the booking
- *         guests:
- *           type: number
- *           description: Number of guests
- *         specialRequests:
- *           type: string
- *           description: Any special requests for the booking
- *         cancellationReason:
- *           type: string
- *           description: Reason for cancellation if applicable
- *         createdAt:
- *           type: string
- *           format: date-time
- *         updatedAt:
- *           type: string
- *           format: date-time
  */
 
 const router = express.Router();
@@ -122,6 +77,59 @@ router.get('/', authenticate, bookingQueriesLimiter, getUserBookings);
 
 /**
  * @swagger
+ * /api/v1/bookings/{id}:
+ *   get:
+ *     summary: Get specific booking details
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Booking ID
+ *     responses:
+ *       200:
+ *         description: Booking details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     booking:
+ *                       $ref: '#/components/schemas/Booking'
+ *       403:
+ *         description: Forbidden - not authorized to view this booking
+ *       404:
+ *         description: Booking not found
+ */
+router.get('/:id', authenticate, getBookingById);
+
+/**
+ * @swagger
+ * /api/v1/bookings/me:
+ *   get:
+ *     summary: List bookings for the authenticated user (alias for /api/v1/bookings)
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of user bookings
+ */
+router.get('/me', authenticate, bookingQueriesLimiter, getUserBookings);
+
+/**
+ * @swagger
  * /api/v1/bookings:
  *   post:
  *     summary: Create a booking for a space
@@ -152,7 +160,8 @@ router.get('/', authenticate, bookingQueriesLimiter, getUserBookings);
  *                 type: integer
  *               bookingType:
  *                 type: string
- *                 enum: [hourly, daily]
+ *                 enum: [hourly, daily, weekly, monthly]
+ *                 description: Optional - auto-selected based on duration if not provided
  *               specialRequests:
  *                 type: string
  *     responses:

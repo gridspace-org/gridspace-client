@@ -1,6 +1,6 @@
-import express from 'express';
-import rateLimit from 'express-rate-limit';
-import multer from 'multer';
+import express from "express";
+import rateLimit from "express-rate-limit";
+import multer from "multer";
 import {
   signup,
   signin,
@@ -19,12 +19,26 @@ import {
   changePassword,
   logout,
   refreshToken,
-  deleteAccount
-} from '../controllers/auth/index.js';
-import { authenticate } from '../middleware/auth.js';
-import upload from '../config/multer.js';
-import validate from '../middleware/validate.js';
-import { signupSchema, signinSchema, requestPasswordResetSchema, resetPasswordSchema, verifyEmailSchema, changePasswordSchema, requestEmailVerificationSchema, resendEmailVerificationSchema, verifyPasswordResetOtpSchema, googleAuthSchema, updateProfileSchema, completeOnboardingSchema, deleteAccountSchema } from '../validators/auth.validator.js';
+  deleteAccount,
+} from "../controllers/auth/index.js";
+import { authenticate } from "../middleware/auth.js";
+import upload from "../config/multer.js";
+import validate from "../middleware/validate.js";
+import {
+  signupSchema,
+  signinSchema,
+  requestPasswordResetSchema,
+  resetPasswordSchema,
+  verifyEmailSchema,
+  changePasswordSchema,
+  requestEmailVerificationSchema,
+  resendEmailVerificationSchema,
+  verifyPasswordResetOtpSchema,
+  googleAuthSchema,
+  updateProfileSchema,
+  completeOnboardingSchema,
+  deleteAccountSchema,
+} from "../validators/auth.validator.js";
 
 /**
  * @swagger
@@ -41,8 +55,8 @@ const strictAuthLimiter = rateLimit({
   max: 5, // Only 5 attempts per 15 minutes per IP
   message: {
     success: false,
-    message: 'Too many authentication attempts. Try again in 15 minutes.'
-  }
+    message: "Too many authentication attempts. Try again in 15 minutes.",
+  },
 });
 
 const moderateAuthLimiter = rateLimit({
@@ -50,8 +64,8 @@ const moderateAuthLimiter = rateLimit({
   max: 10, // 10 attempts per minute per IP
   message: {
     success: false,
-    message: 'Too many requests. Please slow down.'
-  }
+    message: "Too many requests. Please slow down.",
+  },
 });
 
 const gentleAuthLimiter = rateLimit({
@@ -59,8 +73,8 @@ const gentleAuthLimiter = rateLimit({
   max: 5, // 5 attempts per 10 minutes per IP
   message: {
     success: false,
-    message: 'Too many requests. Try again later.'
-  }
+    message: "Too many requests. Try again later.",
+  },
 });
 
 // Public routes
@@ -104,7 +118,7 @@ const gentleAuthLimiter = rateLimit({
  *                 description: Optional profile picture
  *     responses:
  *       201:
- *         description: User created successfully
+ *         description: User created successfully. Email verification required before login.
  *         content:
  *           application/json:
  *             schema:
@@ -112,16 +126,34 @@ const gentleAuthLimiter = rateLimit({
  *               properties:
  *                 success:
  *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
- *                 token:
- *                   type: string
- *                 user:
- *                   $ref: '#/components/schemas/User'
+ *                   example: "Registration successful. Please verify your email to continue."
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *                     emailVerificationRequired:
+ *                       type: boolean
+ *                       example: true
+ *                     nextSteps:
+ *                       type: array
+ *                       items:
+ *                         type: string
  *       400:
  *         description: Validation error
+ *       409:
+ *         description: Email already registered
  */
-router.post("/signup", moderateAuthLimiter, upload.single("profilePic"), validate(signupSchema), signup);
+router.post(
+  "/signup",
+  moderateAuthLimiter,
+  upload.single("profilePic"),
+  validate(signupSchema),
+  signup
+);
 
 /**
  * @swagger
@@ -147,7 +179,7 @@ router.post("/signup", moderateAuthLimiter, upload.single("profilePic"), validat
  *                 format: password
  *     responses:
  *       200:
- *         description: Login successful
+ *         description: Login successful. Tokens are set in HTTP-only cookies and returned in response.
  *         content:
  *           application/json:
  *             schema:
@@ -155,14 +187,34 @@ router.post("/signup", moderateAuthLimiter, upload.single("profilePic"), validat
  *               properties:
  *                 success:
  *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
- *                 token:
- *                   type: string
- *                 user:
- *                   $ref: '#/components/schemas/User'
+ *                   example: "Authentication successful"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *                     tokens:
+ *                       type: object
+ *                       properties:
+ *                         accessToken:
+ *                           type: string
+ *                           description: JWT access token (15 minutes)
+ *                         refreshToken:
+ *                           type: string
+ *                           description: Refresh token (7 days)
+ *                         expiresIn:
+ *                           type: number
+ *                           example: 900
+ *                         tokenType:
+ *                           type: string
+ *                           example: "Bearer"
  *       401:
  *         description: Invalid credentials
+ *       403:
+ *         description: Account suspended or inactive
  */
 router.post("/signin", strictAuthLimiter, validate(signinSchema), signin);
 
@@ -190,7 +242,12 @@ router.post("/signin", strictAuthLimiter, validate(signinSchema), signin);
  *       404:
  *         description: User not found
  */
-router.post("/request-password-reset", moderateAuthLimiter, validate(requestPasswordResetSchema), requestPasswordReset);
+router.post(
+  "/request-password-reset",
+  moderateAuthLimiter,
+  validate(requestPasswordResetSchema),
+  requestPasswordReset
+);
 
 /**
  * @swagger
@@ -231,7 +288,12 @@ router.post("/reset-password", validate(resetPasswordSchema), resetPassword);
  *       200:
  *         description: Verification email sent
  */
-router.post("/request-email-verification", gentleAuthLimiter, validate(requestEmailVerificationSchema), requestEmailVerification);
+router.post(
+  "/request-email-verification",
+  gentleAuthLimiter,
+  validate(requestEmailVerificationSchema),
+  requestEmailVerification
+);
 
 /**
  * @swagger
@@ -266,7 +328,11 @@ router.post("/verify-email", validate(verifyEmailSchema), verifyEmail);
  *       200:
  *         description: Verification email resent
  */
-router.post("/resend-verification-email", validate(resendEmailVerificationSchema), resendEmailVerification);
+router.post(
+  "/resend-verification-email",
+  validate(resendEmailVerificationSchema),
+  resendEmailVerification
+);
 
 /**
  * @swagger
@@ -295,7 +361,12 @@ router.post("/resend-verification-email", validate(resendEmailVerificationSchema
  *       400:
  *         description: Invalid OTP
  */
-router.post("/verify-password-reset-otp", gentleAuthLimiter, validate(verifyPasswordResetOtpSchema), verifyPasswordResetOtp);
+router.post(
+  "/verify-password-reset-otp",
+  gentleAuthLimiter,
+  validate(verifyPasswordResetOtpSchema),
+  verifyPasswordResetOtp
+);
 
 // Google OAuth routes
 
@@ -303,7 +374,8 @@ router.post("/verify-password-reset-otp", gentleAuthLimiter, validate(verifyPass
  * @swagger
  * /api/v1/auth/google:
  *   post:
- *     summary: Sign in or sign up using Google ID token
+ *     summary: Sign in or sign up using Google ID token (Mobile/Web SDK)
+ *     description: Authenticate with Google using ID token from Google Sign-In SDK. Automatically creates account if user doesn't exist.
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -316,11 +388,46 @@ router.post("/verify-password-reset-otp", gentleAuthLimiter, validate(verifyPass
  *             properties:
  *               idToken:
  *                 type: string
+ *                 description: Google ID token from Google Sign-In SDK
+ *                 example: "eyJhbGciOiJSUzI1NiIsImtpZCI6Ij..."
  *     responses:
  *       200:
  *         description: Google authentication successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "google authentication successful"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *                     tokens:
+ *                       type: object
+ *                       properties:
+ *                         accessToken:
+ *                           type: string
+ *                         refreshToken:
+ *                           type: string
+ *                         expiresIn:
+ *                           type: number
+ *                         tokenType:
+ *                           type: string
+ *                           example: "Bearer"
+ *                     provider:
+ *                       type: string
+ *                       example: "google"
  *       400:
- *         description: Invalid Google token
+ *         description: Invalid Google token or missing idToken
+ *       401:
+ *         description: Token verification failed
  */
 router.post("/google", validate(googleAuthSchema), googleAuth);
 
@@ -328,11 +435,34 @@ router.post("/google", validate(googleAuthSchema), googleAuth);
  * @swagger
  * /api/v1/auth/google/url:
  *   get:
- *     summary: Retrieve Google OAuth authorization URL
+ *     summary: Get Google OAuth authorization URL (Server-side flow)
+ *     description: Returns the Google OAuth URL for server-side authentication flow. User should be redirected to this URL.
  *     tags: [Auth]
  *     responses:
  *       200:
- *         description: Authorization URL generated
+ *         description: Google OAuth URL generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Google OAuth URL generated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     googleAuthUrl:
+ *                       type: string
+ *                       format: uri
+ *                       example: "https://accounts.google.com/oauth/authorize?..."
+ *                     clientId:
+ *                       type: string
+ *       500:
+ *         description: Google OAuth not configured
  */
 router.get("/google/url", getGoogleAuthUrlController);
 
@@ -340,7 +470,8 @@ router.get("/google/url", getGoogleAuthUrlController);
  * @swagger
  * /api/v1/auth/google/callback:
  *   get:
- *     summary: Google OAuth callback endpoint
+ *     summary: Google OAuth callback endpoint (Server-side flow)
+ *     description: Handles Google OAuth redirect. Exchanges authorization code for tokens and redirects to frontend with access/refresh tokens.
  *     tags: [Auth]
  *     parameters:
  *       - in: query
@@ -349,9 +480,24 @@ router.get("/google/url", getGoogleAuthUrlController);
  *           type: string
  *         required: true
  *         description: Authorization code from Google
+ *       - in: query
+ *         name: error
+ *         schema:
+ *           type: string
+ *         description: OAuth error from Google (if any)
  *     responses:
  *       302:
- *         description: Redirect to frontend with token
+ *         description: Redirects to frontend
+ *         headers:
+ *           Location:
+ *             description: Redirect URL with tokens or error
+ *             schema:
+ *               type: string
+ *               example: "http://localhost:3000/auth/google/success?accessToken=...&refreshToken=..."
+ *       400:
+ *         description: Missing authorization code
+ *       401:
+ *         description: Failed to authenticate with Google
  */
 router.get("/google/callback", googleCallback);
 
@@ -412,7 +558,13 @@ router.get("/profile", authenticate, getProfile);
  *       400:
  *         description: Validation error
  */
-router.put("/profile", authenticate, upload.single("profilePic"), validate(updateProfileSchema), updateProfile);
+router.put(
+  "/profile",
+  authenticate,
+  upload.single("profilePic"),
+  validate(updateProfileSchema),
+  updateProfile
+);
 
 /**
  * @swagger
@@ -430,30 +582,65 @@ router.put("/profile", authenticate, upload.single("profilePic"), validate(updat
  *             type: object
  *             required:
  *               - role
+ *               - fullname
+ *               - phonenumber
+ *               - bio
+ *               - location
  *             properties:
+ *               fullname:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 100
+ *                 description: User's full name (required, 2-100 characters)
  *               role:
  *                 type: string
  *                 enum: [user, host]
  *                 description: User role (user or host)
+ *               phonenumber:
+ *                 type: string
+ *                 description: Contact number (required for hosts)
  *               bio:
  *                 type: string
- *                 description: Host bio (required if role is host)
+ *                 minLength: 10
+ *                 maxLength: 500
+ *                 description: User bio (required if role is host, 10-500 characters)
+ *               location:
+ *                 type: string
+ *                 minLength: 5
+ *                 maxLength: 200
+ *                 description: User's location (required for hosts, 5-200 characters)
  *               company:
  *                 type: string
  *                 description: Company name (optional for hosts)
- *               phoneNumber:
- *                 type: string
- *                 description: Contact number (required if role is host)
  *               profilePic:
  *                 type: string
  *                 format: binary
  *                 description: Profile picture (optional)
- *               location:
- *                 type: string
- *                 description: Physical location/address (required if role is host)
  *     responses:
  *       200:
  *         description: Onboarding completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Onboarding completed successfully. Welcome to the platform!"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *                     profile:
+ *                       type: object
+ *                       properties:
+ *                         lastUpdated:
+ *                           type: string
+ *                           format: date-time
  *       400:
  *         description: Validation error or missing required fields
  *       401:
@@ -462,7 +649,7 @@ router.put("/profile", authenticate, upload.single("profilePic"), validate(updat
 router.post(
   "/onboarding",
   authenticate,
-  upload.single('profilePic'),
+  upload.single("profilePic"),
   validate(completeOnboardingSchema),
   completeOnboarding
 );
@@ -496,7 +683,12 @@ router.post(
  *       400:
  *         description: Validation error
  */
-router.put("/change-password", authenticate, validate(changePasswordSchema), changePassword);
+router.put(
+  "/change-password",
+  authenticate,
+  validate(changePasswordSchema),
+  changePassword
+);
 
 /**
  * @swagger
@@ -516,13 +708,43 @@ router.post("/logout", authenticate, logout);
  * @swagger
  * /api/v1/auth/refresh-token:
  *   post:
- *     summary: Refresh an authentication token
+ *     summary: Refresh access token using refresh token
+ *     description: Get a new access token and refresh token. Requires refresh token in HTTP-only cookie. New tokens are automatically set in cookies.
  *     tags: [Auth]
- *     security:
- *       - bearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       description: Refresh token should be in HTTP-only cookie, not request body
  *     responses:
  *       200:
- *         description: Token refreshed
+ *         description: Token refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Token refreshed successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     accessToken:
+ *                       type: string
+ *                       description: New JWT access token (15 minutes)
+ *                     refreshToken:
+ *                       type: string
+ *                       description: New refresh token (7 days)
+ *                     expiresIn:
+ *                       type: number
+ *                       example: 900
+ *                     tokenType:
+ *                       type: string
+ *                       example: "Bearer"
+ *       401:
+ *         description: Invalid or expired refresh token
  */
 router.post("/refresh-token", authenticate, refreshToken);
 
@@ -538,7 +760,12 @@ router.post("/refresh-token", authenticate, refreshToken);
  *       200:
  *         description: Account deleted
  */
-router.delete("/account", authenticate, validate(deleteAccountSchema), deleteAccount);
+router.delete(
+  "/account",
+  authenticate,
+  validate(deleteAccountSchema),
+  deleteAccount
+);
 
 // Test route
 router.get("/test", (req, res) => {

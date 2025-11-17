@@ -12,24 +12,32 @@ const requiredEnvVars = [
   'CLOUDINARY_API_SECRET'
 ];
 
-// Optional environment variables with defaults
+// Optional environment variables with defaults (development-friendly)
 const optionalEnvVars = {
   NODE_ENV: 'development',
-  PORT: 5000,
-  CORS_ORIGIN: 'https://work.gridspace.com.ng,http://localhost:3000,http://localhost:3001',
-  FRONTEND_URL: 'https://work.gridspace.com.ng',
+  PORT: 5002,
+  CORS_ORIGIN: 'http://localhost:3000,http://localhost:3001',
+  FRONTEND_URL: 'http://localhost:3000',
   // Token configuration
   ACCESS_TOKEN_EXPIRES: '15m',        // 15 minutes
   REFRESH_TOKEN_EXPIRES: '7d',        // 7 days
   JWT_ISSUER: 'gridspace-backend',    // Token issuer
   JWT_AUDIENCE: 'gridspace-client',   // Token audience
   // API configuration
-  API_URL: process.env.NODE_ENV === 'production' 
-    ? 'https://api.gridspace.com.ng' 
-    : 'http://localhost:5000',   // Base URL for API calls
+  API_URL: 'http://localhost:5002',   // Base URL for API calls (use PORT env var if different)
   // Security
   RATE_LIMIT_WINDOW_MS: '15 * 60 * 1000', // 15 minutes
   RATE_LIMIT_MAX: '100',              // 100 requests per window
+  // Monnify Payment Gateway
+  MONNIFY_BASE_URL: 'https://sandbox.monnify.com',
+  MONNIFY_API_KEY: '',
+  MONNIFY_SECRET_KEY: '',
+  MONNIFY_CONTRACT_CODE: '',
+  // Wallet Configuration
+  WALLET_DAILY_WITHDRAWAL_LIMIT: '50000',
+  WALLET_MONTHLY_WITHDRAWAL_LIMIT: '500000',
+  WALLET_MIN_WITHDRAWAL: '500',
+  WALLET_CURRENCY: 'NGN',
 };
 
 // Validate required environment variables
@@ -38,6 +46,24 @@ const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 if (missingVars.length > 0) {
   console.error(`Missing required environment variables: ${missingVars.join(', ')}`);
   process.exit(1);
+}
+
+// Validate production-specific environment variables
+if (process.env.NODE_ENV === 'production') {
+  const productionRequiredVars = [
+    'CORS_ORIGIN',
+    'FRONTEND_URL',
+    'API_URL',
+    'MONNIFY_WEBHOOK_SECRET'
+  ];
+  
+  const missingProductionVars = productionRequiredVars.filter(varName => !process.env[varName]);
+  
+  if (missingProductionVars.length > 0) {
+    console.error(`Missing required production environment variables: ${missingProductionVars.join(', ')}`);
+    console.error('Production requires CORS_ORIGIN, FRONTEND_URL, API_URL, and MONNIFY_WEBHOOK_SECRET to be set in .env');
+    process.exit(1);
+  }
 }
 
 // Apply default values for optional variables
@@ -90,6 +116,25 @@ const env = {
   nodeEnv: process.env.NODE_ENV,
   port: parseInt(process.env.PORT, 10),
   corsOrigins: process.env.CORS_ORIGIN?.split(',').map(s => s.trim()) || [],
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  
+  // Monnify payment gateway
+  monnify: {
+    baseUrl: process.env.MONNIFY_BASE_URL,
+    apiKey: process.env.MONNIFY_API_KEY,
+    secretKey: process.env.MONNIFY_SECRET_KEY,
+    contractCode: process.env.MONNIFY_CONTRACT_CODE,
+    webhookSecret: process.env.MONNIFY_WEBHOOK_SECRET || '',
+    enabled: !!(process.env.MONNIFY_API_KEY && process.env.MONNIFY_SECRET_KEY),
+  },
+  
+  // Wallet configuration
+  wallet: {
+    dailyWithdrawalLimit: parseInt(process.env.WALLET_DAILY_WITHDRAWAL_LIMIT, 10),
+    monthlyWithdrawalLimit: parseInt(process.env.WALLET_MONTHLY_WITHDRAWAL_LIMIT, 10),
+    minWithdrawal: parseInt(process.env.WALLET_MIN_WITHDRAWAL, 10),
+    currency: process.env.WALLET_CURRENCY,
+  },
   
   // Helper methods
   isProduction: process.env.NODE_ENV === 'production',

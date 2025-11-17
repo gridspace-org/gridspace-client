@@ -1,74 +1,171 @@
 import Booking from '../models/Booking.model.js';
 
-export const findUserBookings = async ({ userId, status, page, limit }) => {
-  const filter = { userId, isActive: true };
-  if (status) {
-    filter.status = status;
+class BookingRepository {
+  async findByUserId(userId, filters = {}, options = {}) {
+    const { status } = filters;
+    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = -1, populateFields = ['spaceId'] } = options;
+    
+    const filter = { userId, isActive: true };
+    if (status) {
+      filter.status = status;
+    }
+
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder;
+
+    const query = Booking.find(filter)
+      .sort(sortOptions)
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    // Apply population
+    if (populateFields.includes('spaceId')) {
+      query.populate('spaceId', 'title location images amenities capacity pricePerHour');
+    }
+
+    const [bookings, total] = await Promise.all([
+      query.lean(),
+      Booking.countDocuments(filter)
+    ]);
+
+    return {
+      bookings,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        limit,
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPrevPage: page > 1
+      }
+    };
   }
 
-  const options = {
-    page,
-    limit,
-    sort: { createdAt: -1 },
-    populate: {
-      path: 'spaceId',
-      select: 'title location images amenities capacity pricePerHour',
-    },
-    lean: true,
-  };
+  async findByHostId(hostId, filters = {}, options = {}) {
+    const { status, spaceId } = filters;
+    const { page = 1, limit = 10, sortBy = 'startTime', sortOrder = -1, populateFields = ['userId', 'spaceId'] } = options;
+    
+    // Build filter for host's spaces
+    const filter = { isActive: true };
+    
+    if (status) {
+      filter.status = status;
+    }
 
-  return Booking.paginate(filter, options);
-};
+    // If specific spaceId provided, filter by that space
+    if (spaceId) {
+      filter.spaceId = spaceId;
+    }
 
-export const findBookingByIdWithSpace = (bookingId) =>
-  Booking.findById(bookingId).populate('spaceId', 'hostId title');
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder;
 
-export const findActiveBookingForUser = ({ bookingId, userId }) =>
-  Booking.findOne({ _id: bookingId, userId, isActive: true });
+    const query = Booking.find(filter)
+      .sort(sortOptions)
+      .skip((page - 1) * limit)
+      .limit(limit);
 
-export const updateBookingById = (bookingId, update, { runValidators = true, populate } = {}) => {
-  let query = Booking.findByIdAndUpdate(
-    bookingId,
-    update,
-    { new: true, runValidators }
-  );
+    // Apply population
+    if (populateFields.includes('spaceId')) {
+      query.populate('spaceId', 'title location');
+    }
+    if (populateFields.includes('userId')) {
+      query.populate('userId', 'fullname email profilePic');
+    }
 
-  if (populate) {
-    const populations = Array.isArray(populate) ? populate : [populate];
-    populations.forEach((pop) => {
-      query = query.populate(pop);
-    });
+    const [bookings, total] = await Promise.all([
+      query.lean(),
+      Booking.countDocuments(filter)
+    ]);
+
+    return {
+      bookings,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        limit,
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPrevPage: page > 1
+      }
+    };
   }
 
-  return query;
-};
+  async findById(bookingId, populateFields = []) {
+    let query = Booking.findById(bookingId);
 
-export const findHostBookings = async ({ hostId, spaceIds, spaceId, status, page, limit }) => {
-  const filter = {
-    spaceId: spaceId || { $in: spaceIds },
-    isActive: true,
-  };
+    if (populateFields.length > 0) {
+      populateFields.forEach(field => {
+        if (field === 'spaceId') {
+          query = query.populate(field, 'hostId title');
+        } else if (field === 'userId') {
+          query = query.populate(field, 'fullname email profilePic');
+        } else {
+          query = query.populate(field);
+        }
+      });
+    }
 
-  if (status) {
-    filter.status = status;
+    return query.lean();
   }
 
-  const options = {
-    page,
-    limit,
-    sort: { startTime: 1 },
-    populate: [
-      {
-        path: 'spaceId',
-        select: 'title location',
-      },
-      {
-        path: 'userId',
-        select: 'fullname email profilePic',
-      },
-    ],
-    lean: true,
-  };
+  async findByIdAndUpdate(bookingId, updateData, populateFields = []) {
+    let query = Booking.findByIdAndUpdate(
+      bookingId,
+      updateData,
+      { new: true, runValidators: true }
+    );
 
-  return Booking.paginate(filter, options);
-};
+    if (populateFields.length > 0) {
+      populateFields.forEach(field => {
+        if (field === 'spaceId') {
+          query = query.populate(field, 'hostId title');
+        } else if (field === 'userId') {
+          query = query.populate(field, 'fullname email profilePic');
+        } else {
+          query = query.populate(field);
+        }
+      });
+    }
+
+    return query.lean();
+  }
+
+  async findConflicts(spaceId, startTime, endTime) {
+    return Booking.find({
+      spaceId,
+      status: { $nin: ['cancelled'] },
+      $or: [
+        { startTime: { $lt: endTime }, endTime: { $gt: startTime } }
+      ]
+    }).lean();
+  }
+
+  async create(bookingData) {
+    const booking = new Booking(bookingData);
+    return booking.save();
+  }
+
+  async find(query = {}) {
+    return Booking.find(query).lean();
+  }
+
+  async count(query = {}) {
+    return Booking.countDocuments(query);
+  }
+
+  // Legacy methods for backward compatibility
+  async findUserBookings({ userId, status, page, limit }) {
+    return this.findByUserId(userId, { status }, { page, limit });
+  }
+
+  async findHostBookings({ hostId, spaceIds, spaceId, status, page, limit }) {
+    return this.findByHostId(hostId, { spaceId, status }, { page, limit });
+  }
+
+  async findConflicts({ spaceId, startTime, endTime }) {
+    return this.findConflicts(spaceId, startTime, endTime);
+  }
+}
+
+export default BookingRepository;
