@@ -17,6 +17,7 @@ import logger from "../../config/logger.js";
  * Creates a new booking with conflict detection and business rule validation
  */
 export const createBooking = async (req, res) => {
+  console.log("createBooking controller called");
   const startTime = Date.now();
   const { _id: userId } = req.user; // Assuming user info is in req.user from auth middleware
 

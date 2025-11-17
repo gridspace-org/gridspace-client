@@ -1,6 +1,7 @@
 import Joi from "joi";
 
 const validate = (schema) => (req, res, next) => {
+  console.log("Validate middleware called for path:", req.path);
   let dataToValidate = req.body;
 
   // If files are present, add their information to the data to be validated
