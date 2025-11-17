@@ -270,6 +270,16 @@ export const getBookingByIdService = async (bookingId, userId, role) => {
  * @returns {Promise<Object>} Created booking
  */
 export const createBookingService = async (bookingData) => {
+  console.error(
+    "createBookingService called with:",
+    JSON.stringify(bookingData, null, 2)
+  );
+  console.error("Type of bookingData:", typeof bookingData);
+  console.error(
+    "bookingData is null/undefined:",
+    bookingData === null || bookingData === undefined
+  );
+
   logger.debug("BookingService.createBooking START", {
     bookingData: bookingData,
     bookingDataType: typeof bookingData,
