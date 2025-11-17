@@ -147,7 +147,7 @@ app.use(cors(corsOptions));
 // NoSQL injection protection handled by custom sanitizer
 
 // Input sanitization middleware (must be after JSON parsing)
-app.use(sanitizeRequest);
+// app.use(sanitizeRequest);
 app.use(auditLoginAttempts);
 
 // Interactive API Documentation (Swagger UI)
