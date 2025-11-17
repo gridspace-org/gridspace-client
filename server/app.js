@@ -4,7 +4,6 @@ import cors from "cors";
 import helmet from "helmet";
 import mongoSanitize from "@exortek/express-mongo-sanitize";
 import rateLimit from "express-rate-limit";
-import hpp from "hpp";
 import cookieParser from "cookie-parser";
 
 import mongoose from "mongoose";
