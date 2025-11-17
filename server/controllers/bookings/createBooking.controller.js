@@ -21,6 +21,7 @@ export const createBooking = async (req, res) => {
   console.error("req.body:", JSON.stringify(req.body, null, 2));
   const startTime = Date.now();
   const { _id: userId } = req.user; // Assuming user info is in req.user from auth middleware
+  const userIdString = userId.toString(); // Convert ObjectId to string
 
   try {
     logger.info("CreateBooking request started", {
@@ -43,7 +44,7 @@ export const createBooking = async (req, res) => {
     // Prepare booking data with user ID
     const bookingData = {
       ...req.body,
-      userId: userId,
+      userId: userIdString,
     };
 
     console.error(
