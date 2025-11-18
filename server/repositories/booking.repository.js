@@ -1,10 +1,16 @@
-import Booking from '../models/Booking.model.js';
+import Booking from "../models/Booking.model.js";
 
 class BookingRepository {
   async findByUserId(userId, filters = {}, options = {}) {
     const { status } = filters;
-    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = -1, populateFields = ['spaceId'] } = options;
-    
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      sortOrder = -1,
+      populateFields = ["spaceId"],
+    } = options;
+
     const filter = { userId, isActive: true };
     if (status) {
       filter.status = status;
@@ -19,13 +25,16 @@ class BookingRepository {
       .limit(limit);
 
     // Apply population
-    if (populateFields.includes('spaceId')) {
-      query.populate('spaceId', 'title location images amenities capacity pricePerHour');
+    if (populateFields.includes("spaceId")) {
+      query.populate(
+        "spaceId",
+        "title location images amenities capacity pricePerHour"
+      );
     }
 
     const [bookings, total] = await Promise.all([
       query.lean(),
-      Booking.countDocuments(filter)
+      Booking.countDocuments(filter),
     ]);
 
     return {
@@ -36,18 +45,24 @@ class BookingRepository {
         totalItems: total,
         limit,
         hasNextPage: page < Math.ceil(total / limit),
-        hasPrevPage: page > 1
-      }
+        hasPrevPage: page > 1,
+      },
     };
   }
 
   async findByHostId(hostId, filters = {}, options = {}) {
     const { status, spaceId } = filters;
-    const { page = 1, limit = 10, sortBy = 'startTime', sortOrder = -1, populateFields = ['userId', 'spaceId'] } = options;
-    
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "startTime",
+      sortOrder = -1,
+      populateFields = ["userId", "spaceId"],
+    } = options;
+
     // Build filter for host's spaces
     const filter = { isActive: true };
-    
+
     if (status) {
       filter.status = status;
     }
@@ -66,16 +81,16 @@ class BookingRepository {
       .limit(limit);
 
     // Apply population
-    if (populateFields.includes('spaceId')) {
-      query.populate('spaceId', 'title location');
+    if (populateFields.includes("spaceId")) {
+      query.populate("spaceId", "title location");
     }
-    if (populateFields.includes('userId')) {
-      query.populate('userId', 'fullname email profilePic');
+    if (populateFields.includes("userId")) {
+      query.populate("userId", "fullname email profilePic");
     }
 
     const [bookings, total] = await Promise.all([
       query.lean(),
-      Booking.countDocuments(filter)
+      Booking.countDocuments(filter),
     ]);
 
     return {
@@ -86,8 +101,8 @@ class BookingRepository {
         totalItems: total,
         limit,
         hasNextPage: page < Math.ceil(total / limit),
-        hasPrevPage: page > 1
-      }
+        hasPrevPage: page > 1,
+      },
     };
   }
 
@@ -95,11 +110,11 @@ class BookingRepository {
     let query = Booking.findById(bookingId);
 
     if (populateFields.length > 0) {
-      populateFields.forEach(field => {
-        if (field === 'spaceId') {
-          query = query.populate(field, 'hostId title');
-        } else if (field === 'userId') {
-          query = query.populate(field, 'fullname email profilePic');
+      populateFields.forEach((field) => {
+        if (field === "spaceId") {
+          query = query.populate(field, "hostId title");
+        } else if (field === "userId") {
+          query = query.populate(field, "fullname email profilePic");
         } else {
           query = query.populate(field);
         }
@@ -110,18 +125,17 @@ class BookingRepository {
   }
 
   async findByIdAndUpdate(bookingId, updateData, populateFields = []) {
-    let query = Booking.findByIdAndUpdate(
-      bookingId,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    let query = Booking.findByIdAndUpdate(bookingId, updateData, {
+      new: true,
+      runValidators: true,
+    });
 
     if (populateFields.length > 0) {
-      populateFields.forEach(field => {
-        if (field === 'spaceId') {
-          query = query.populate(field, 'hostId title');
-        } else if (field === 'userId') {
-          query = query.populate(field, 'fullname email profilePic');
+      populateFields.forEach((field) => {
+        if (field === "spaceId") {
+          query = query.populate(field, "hostId title");
+        } else if (field === "userId") {
+          query = query.populate(field, "fullname email profilePic");
         } else {
           query = query.populate(field);
         }
@@ -134,10 +148,8 @@ class BookingRepository {
   async findConflicts(spaceId, startTime, endTime) {
     return Booking.find({
       spaceId,
-      status: { $nin: ['cancelled'] },
-      $or: [
-        { startTime: { $lt: endTime }, endTime: { $gt: startTime } }
-      ]
+      status: { $nin: ["cancelled"] },
+      $or: [{ startTime: { $lt: endTime }, endTime: { $gt: startTime } }],
     }).lean();
   }
 
@@ -163,8 +175,12 @@ class BookingRepository {
     return this.findByHostId(hostId, { spaceId, status }, { page, limit });
   }
 
-  async findConflicts({ spaceId, startTime, endTime }) {
-    return this.findConflicts(spaceId, startTime, endTime);
+  async findConflicts(spaceId, startTime, endTime) {
+    return Booking.find({
+      spaceId,
+      status: { $nin: ["cancelled"] },
+      $or: [{ startTime: { $lt: endTime }, endTime: { $gt: startTime } }],
+    }).lean();
   }
 }
 

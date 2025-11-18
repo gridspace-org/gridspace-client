@@ -231,8 +231,21 @@ export const getBookingByIdService = async (bookingId, userId, role) => {
     }
 
     // Check access based on user role
-    if (role === "user" && booking.userId._id.toString() !== userId) {
-      throw new AppError("Access denied to this booking", 403);
+    if (role === "user") {
+      const bookingUserId = booking.userId._id
+        ? booking.userId._id.toString()
+        : booking.userId.toString();
+      logger.debug("Booking access check", {
+        bookingUserId,
+        bookingUserIdType: typeof bookingUserId,
+        userId,
+        userIdType: typeof userId,
+        userIdString: userId.toString(),
+        areEqual: bookingUserId === userId.toString(),
+      });
+      if (bookingUserId !== userId.toString()) {
+        throw new AppError("Access denied to this booking", 403);
+      }
     }
 
     if (role === "host") {
@@ -388,9 +401,11 @@ export const createBookingService = async (bookingData) => {
 
     // Validate booking time against space's time slots
     if (space.timeSlots && space.timeSlots.length > 0) {
-      const bookingDay = startDateTime.toLocaleLowerCase("en-US", {
-        weekday: "long",
-      });
+      const bookingDay = startDateTime
+        .toLocaleString("en-US", {
+          weekday: "long",
+        })
+        .toLowerCase();
       const bookingStartTime = startDateTime.toTimeString().slice(0, 5); // HH:MM format
       const bookingEndTime = endDateTime.toTimeString().slice(0, 5); // HH:MM format
 
@@ -488,6 +503,10 @@ export const createBookingService = async (bookingData) => {
     }
 
     const calculatedAmount = totalAmount || basePrice;
+    const markupPercentage = 15; // Platform takes 15% as service fee
+    const markupAmount = Math.round(basePrice * (markupPercentage / 100));
+    const finalTotalAmount = basePrice + markupAmount;
+    const hostEarnings = basePrice; // Host receives 100% of base price
 
     // Create booking data
     const newBooking = {
@@ -498,12 +517,16 @@ export const createBookingService = async (bookingData) => {
       bookingType,
       duration,
       basePrice,
+      markupPercentage,
+      markupAmount,
+      totalAmount: finalTotalAmount,
+      hostEarnings,
       guestCount: guestCount || 1,
-      totalAmount: calculatedAmount,
       specialRequests: specialRequests || "",
       status: "pending",
       paymentStatus: "pending",
       isActive: true,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
     };
 
     // Save booking
@@ -658,7 +681,10 @@ export const cancelBookingService = async ({ bookingId, userId }) => {
     }
 
     // Verify user owns the booking
-    if (booking.userId._id.toString() !== userId.toString()) {
+    const bookingUserId = booking.userId._id
+      ? booking.userId._id.toString()
+      : booking.userId.toString();
+    if (bookingUserId !== userId.toString()) {
       throw new AppError("Access denied to this booking", 403);
     }
 

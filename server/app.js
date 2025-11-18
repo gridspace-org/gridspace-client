@@ -31,7 +31,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-console.log("App.js loaded - starting server");
+logger.info("App.js loaded - starting server");
 
 const auditLoginAttempts = (req, res, next) => {
   if (req.method !== "GET" && req.originalUrl.includes("/auth/signin")) {
