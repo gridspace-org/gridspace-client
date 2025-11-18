@@ -16,6 +16,13 @@ class BookingRepository {
       filter.status = status;
     }
 
+    logger.debug("BookingRepository.findByUserId", {
+      userId,
+      userIdType: typeof userId,
+      userIdString: userId.toString(),
+      filter,
+    });
+
     const sortOptions = {};
     sortOptions[sortBy] = sortOrder;
 
@@ -36,6 +43,11 @@ class BookingRepository {
       query.lean(),
       Booking.countDocuments(filter),
     ]);
+    logger.debug("BookingRepository.findByUserId result", {
+      totalBookings: total,
+      bookingsFound: bookings.length,
+      firstBookingId: bookings.length > 0 ? bookings[0]._id : null,
+    });
 
     return {
       bookings,
