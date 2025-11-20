@@ -144,21 +144,17 @@ export const deleteAccount = asyncHandler(async (req, res) => {
       );
     }
 
-    // TODO: Implement account deletion in service
-    // This would involve:
-    // 1. Verify password
-    // 2. Cancel active bookings
-    // 3. Remove from spaces
-    // 4. Delete user record
-    // 5. Clear all tokens
+    // Delete account via service
+    const result = await authService.deleteUser(req.user._id, password);
 
-    throw new AppError("Account deletion feature not yet implemented", 501);
+    // Clear cookies and tokens
+    res.clearCookie('token');
+    res.clearCookie('refreshToken');
 
     // Send response
     res.status(200).json({
       success: true,
-      message:
-        "Account deletion requested. You will receive a confirmation email.",
+      message: "Account successfully deleted. Your data has been deactivated.",
     });
   } catch (error) {
     logger.error("Delete account controller failed", {

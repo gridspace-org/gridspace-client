@@ -1,4 +1,5 @@
 import Booking from "../models/Booking.model.js";
+import logger from "../config/logger.js";
 
 class BookingRepository {
   async findByUserId(userId, filters = {}, options = {}) {

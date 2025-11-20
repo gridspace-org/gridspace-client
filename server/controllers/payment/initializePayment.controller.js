@@ -1,12 +1,13 @@
 import Transaction from '../../models/Transaction.model.js';
 import Booking from '../../models/Booking.model.js';
 import monnifyService from '../../services/payment/monnify.service.js';
+import walletService from '../../services/wallet/wallet.service.js';
 import AppError from '../../utils/AppError.js';
 import asyncHandler from '../../utils/asyncHandler.js';
 import env from '../../config/env.js';
 
 export const initializePayment = asyncHandler(async (req, res, next) => {
-  const { bookingId } = req.body;
+  const { bookingId, paymentMethod } = req.body;
   const userId = req.user._id;
 
   const booking = await Booking.findById(bookingId).populate('spaceId');
@@ -22,6 +23,22 @@ export const initializePayment = asyncHandler(async (req, res, next) => {
     return next(new AppError('Booking is not pending payment', 400));
   }
 
+  // Handle Wallet Payment
+  if (paymentMethod === 'wallet') {
+    const updatedBooking = await walletService.processBookingPayment(userId, bookingId);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Payment successful',
+      data: {
+        paymentStatus: 'paid',
+        amount: updatedBooking.totalAmount,
+        paymentMethod: 'wallet'
+      }
+    });
+  }
+
+  // Handle Monnify Payment (Default)
   const paymentReference = `GS-${Date.now()}-${bookingId}`;
 
   const monnifyResponse = await monnifyService.initializeTransaction({

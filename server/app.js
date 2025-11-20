@@ -144,7 +144,8 @@ app.get("/test", (req, res) => {
 
 app.use(cors(corsOptions));
 
-// NoSQL injection protection handled by custom sanitizer
+// NoSQL injection protection
+app.use(mongoSanitize());
 
 // Input sanitization middleware (must be after JSON parsing)
 // app.use(sanitizeRequest);

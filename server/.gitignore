@@ -10,9 +10,6 @@ esm-migration-audit/
 
 # Documentation (generated/in-progress)
 docs/
-API_DOCUMENTATION.md
-SPACES_API_DOCUMENTATION.md
-BOOKINGS_API_DOCUMENTATION.md
 
 # Project management
 bugfix_plan.md

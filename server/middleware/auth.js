@@ -137,65 +137,19 @@ export const refreshIfNeeded = async (req, res, next) => {
     return next();
   }
 
-  try {
-    // Try to verify access token using the same verification logic
-    const { verifyToken } = require("../controllers/auth/auth.utils.js");
-    verifyToken(accessToken);
-    return next(); // Token is valid, proceed
-  } catch (error) {
-    if (error.name !== "TokenExpiredError") {
-      return next(); // Not an expiration error, proceed with normal auth flow
-    }
-
-    // Access token is expired, try to refresh
-    try {
-      const baseUrl =
-        process.env.API_URL || `http://localhost:${process.env.PORT || 5000}`;
-      const response = await fetch(`${baseUrl}/api/v1/auth/refresh-token`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Cookie: `refreshToken=${refreshToken}; accessToken=${accessToken}`,
-        },
-        redirect: "follow",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        logger.error("Token refresh failed:", {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData,
-        });
-        return next(); // Continue with normal auth flow (will likely fail with 401)
+try {
+      // Try to verify access token using the same verification logic
+      verifyToken(accessToken);
+      return next(); // Token is valid, proceed
+    } catch (error) {
+      if (error.name !== "TokenExpiredError") {
+        return next(); // Not an expiration error, proceed with normal auth flow
       }
 
-      // Get the new tokens from the response
-      const data = await response.json();
-      const { accessToken: newAccessToken } = data;
-
-      if (!newAccessToken) {
-        logger.error("No access token in refresh response");
-        return next();
-      }
-
-      // Update the access token in the request
-      req.cookies.accessToken = newAccessToken;
-      res.cookie("accessToken", newAccessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 15 * 60 * 1000, // 15 minutes
-        path: "/",
-      });
-
-      next();
-    } catch (refreshError) {
-      logger.error("Token refresh failed:", { error: refreshError });
-      return next(); // Continue with normal auth flow (will likely fail with 401)
+      // Access token is expired, try to refresh
+      logger.info("Access token expired, attempting refresh");
+      return next(); // Let the main auth middleware handle the expired token
     }
-  }
 };
 
 /**

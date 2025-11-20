@@ -209,60 +209,9 @@ class AdminService {
         notes
       );
 
-      // Release pending funds to host
-      const hostId = space.hostId;
-      
-      // Find all paid bookings for this space with pending host payments
-      const bookings = await Booking.find({
-        spaceId,
-        paymentStatus: 'paid',
-        hostPaidOut: false
-      });
-
-      let totalReleased = 0;
-
-      // Release pending balance for each booking
-      for (const booking of bookings) {
-        const walletTx = await WalletTransaction.findOne({
-          bookingId: booking._id,
-          category: 'host_earning',
-          status: 'pending'
-        });
-
-        if (walletTx) {
-          try {
-            await walletService.releasePendingBalance(
-              hostId,
-              booking.hostEarnings,
-              walletTx.reference
-            );
-
-            booking.hostPaidOut = true;
-            booking.hostPaidOutAt = new Date();
-            await booking.save();
-
-            totalReleased += booking.hostEarnings;
-          } catch (error) {
-            logger.error('[Admin] Failed to release funds for booking', {
-              bookingId: booking._id,
-              error: error.message
-            });
-          }
-        }
-      }
-
-      logger.info('[Admin] Space approved, funds released', {
-        spaceId,
-        hostId,
-        bookingsCount: bookings.length,
-        totalReleased
-      });
-
       // Log the admin action
       await this.logAdminAction('approve_space', 'space', spaceId, { 
-        notes, 
-        fundsReleased: totalReleased,
-        bookingsProcessed: bookings.length 
+        notes
       }, adminUser);
 
       // Format response with DTO

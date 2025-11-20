@@ -8,6 +8,7 @@ import { getHostBookings } from '../controllers/bookings/getHostBookings.control
 import { updateBookingStatus } from '../controllers/bookings/updateBookingStatus.controller.js';
 import { cancelBooking } from '../controllers/bookings/cancelBooking.controller.js';
 import { getBookingById } from '../controllers/bookings/getBookingById.controller.js';
+import { verifyBooking } from '../controllers/bookings/verifyBooking.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roles.js';
 import { checkBookingConflicts } from '../middleware/bookingChecks.js';
@@ -203,6 +204,32 @@ router.post(
  *         description: Booking not found
  */
 router.delete('/:id/cancel', authenticate, checkBookingConflicts, cancelBooking);
+
+/**
+ * @swagger
+ * /api/v1/bookings/{bookingId}/verify:
+ *   post:
+ *     summary: Verify a booking and release funds to host (Escrow)
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: bookingId
+ *         schema:
+ *           type: string
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Booking verified and funds released
+ *       400:
+ *         description: Invalid verification request (e.g., not paid, already verified)
+ *       403:
+ *         description: Unauthorized (only booker can verify)
+ *       404:
+ *         description: Booking not found
+ */
+router.post('/:bookingId/verify', authenticate, verifyBooking);
 
 // Host booking routes - require host role
 

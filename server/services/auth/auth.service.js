@@ -703,6 +703,49 @@ class AuthService {
   isOnboardingComplete(user) {
     return !!(user.fullname && user.email && user.emailVerified);
   }
+
+  /**
+   * Delete user account (soft delete)
+   * @param {string} userId - User ID
+   * @param {string} password - Password confirmation
+   * @returns {Promise<Object>} Deletion result
+   */
+  async deleteUser(userId, password) {
+    try {
+      // Get user
+      const user = await authRepository.getUserById(userId);
+      
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Verify password
+      const isPasswordValid = await user.comparePassword(password);
+      if (!isPasswordValid) {
+        throw new AppError('Invalid password', 401);
+      }
+
+      // Soft delete: Set isActive to false instead of hard delete
+      // This preserves data integrity and allows for potential recovery
+      await authRepository.updateUserById(userId, { 
+        isActive: false,
+        deactivatedAt: new Date()
+      });
+
+      logger.info('User account deleted', { userId, email: user.email });
+
+      return {
+        success: true,
+        message: 'Account successfully deleted'
+      };
+    } catch (error) {
+      logger.error('Delete user failed', { 
+        userId,
+        error: error.message 
+      });
+      throw error;
+    }
+  }
 }
 
 export default new AuthService();

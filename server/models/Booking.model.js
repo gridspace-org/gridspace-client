@@ -173,6 +173,17 @@ const bookingSchema = new mongoose.Schema({
   },
   hostPaidOutAt: Date,
 
+  // ===== VERIFICATION & ESCROW =====
+  verifiedAt: Date,
+  verifiedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  },
+  fundsReleased: {
+    type: Boolean,
+    default: false
+  },
+
   expiresAt: {
     type: Date,
     required: function() {

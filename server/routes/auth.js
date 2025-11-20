@@ -751,17 +751,49 @@ router.post("/refresh-token", authenticate, refreshToken);
 /**
  * @swagger
  * /api/v1/auth/delete-account:
- *   delete:
- *     summary: Delete authenticated user's account
+ *   post:
+ *     summary: Delete user account (soft delete)
+ *     description: Permanently deactivate user account. Requires password confirmation for security. Account is soft-deleted (isActive=false) to preserve data integrity.
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - password
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 description: Current password for confirmation
+ *                 example: "YourPassword123!"
  *     responses:
  *       200:
- *         description: Account deleted
+ *         description: Account successfully deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Account successfully deleted. Your data has been deactivated."
+ *       400:
+ *         description: Password is required
+ *       401:
+ *         description: Invalid password or unauthorized
+ *       404:
+ *         description: User not found
  */
-router.delete(
-  "/account",
+router.post(
+  "/delete-account",
   authenticate,
   validate(deleteAccountSchema),
   deleteAccount

@@ -3,6 +3,12 @@ import WalletTransaction from '../../models/WalletTransaction.model.js';
 import AppError from '../../utils/AppError.js';
 import logger from '../../config/logger.js';
 
+import monnifyService from '../../services/payment/monnify.service.js';
+import paymentService from '../../services/payment/payment.service.js';
+import env from '../../config/env.js';
+import Booking from '../../models/Booking.model.js';
+import Transaction from '../../models/Transaction.model.js';
+
 class WalletService {
   async createWallet(userId) {
     try {
@@ -183,6 +189,123 @@ class WalletService {
     });
 
     return transactions;
+  }
+
+  async initiateDeposit(userId, amount, description) {
+    const session = await Wallet.startSession();
+    session.startTransaction();
+
+    try {
+      const user = await Wallet.findOne({ userId }).session(session); // Verify wallet exists
+      if (!user) throw new AppError('Wallet not found', 404);
+
+      const paymentReference = `DEP-${Date.now()}-${userId}`;
+      const finalDescription = description || 'Wallet Deposit';
+
+      // Create pending transaction
+      await WalletTransaction.create([{
+        walletId: user._id,
+        userId,
+        type: 'credit',
+        category: 'deposit',
+        amount,
+        balanceBefore: user.availableBalance,
+        balanceAfter: user.availableBalance, // No change yet
+        status: 'pending',
+        reference: paymentReference,
+        description: finalDescription
+      }], { session });
+
+      await session.commitTransaction();
+
+      // Initialize with Monnify (outside transaction to avoid long-running db transaction)
+      // We need user details, but for now we'll pass minimal info or fetch user if needed.
+      // Ideally, the controller passes user details. Let's assume we fetch user here or pass it.
+      // For better design, let's fetch user email/name in controller and pass it, 
+      // OR fetch it here. Let's fetch it here for safety.
+      const User = (await import('../../models/User.model.js')).default;
+      const userDetails = await User.findById(userId);
+
+      const monnifyResponse = await monnifyService.initializeTransaction({
+        amount,
+        customerName: userDetails.fullname,
+        customerEmail: userDetails.email,
+        paymentReference,
+        paymentDescription: finalDescription,
+        redirectUrl: `${env.frontendUrl}/wallet/deposit-complete`,
+        metadata: { type: 'wallet_deposit', userId }
+      });
+
+      return {
+        checkoutUrl: monnifyResponse.checkoutUrl,
+        paymentReference,
+        transactionReference: monnifyResponse.transactionReference
+      };
+
+    } catch (error) {
+      await session.abortTransaction();
+      logger.error('[Wallet] Deposit initiation failed', { userId, error: error.message });
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  async processBookingPayment(userId, bookingId) {
+    const session = await Wallet.startSession();
+    session.startTransaction();
+
+    try {
+      const booking = await Booking.findById(bookingId)
+        .populate('spaceId')
+        .session(session);
+
+      if (!booking) throw new AppError('Booking not found', 404);
+      if (booking.paymentStatus === 'paid') throw new AppError('Booking already paid', 400);
+
+      // Debit User Wallet
+      await this.debitWallet(
+        userId,
+        booking.totalAmount,
+        'booking_payment',
+        `Payment for booking ${booking._id}`,
+        { bookingId: booking._id }
+      );
+
+      // Update Booking Status
+      booking.paymentStatus = 'paid';
+      booking.status = 'upcoming';
+      booking.paidAt = new Date();
+      await booking.save({ session });
+
+      // Create Transaction Record (for consistency with Monnify flow)
+      await Transaction.create([{
+        userId,
+        bookingId,
+        amount: booking.totalAmount,
+        currency: 'NGN',
+        paymentStatus: 'paid',
+        paymentMethod: 'wallet',
+        paymentReference: `WAL-${Date.now()}-${booking._id}`,
+        transactionReference: `WTX-${Date.now()}-${booking._id}`,
+        paymentDate: new Date(),
+        webhookReceived: true // Internal transaction, treated as verified
+      }], { session });
+
+      // Distribute Funds (Host & Admin)
+      await paymentService.distributeBookingFunds(booking, session);
+
+      await session.commitTransaction();
+      logger.info('[Wallet] Booking paid via wallet', { userId, bookingId });
+
+      return booking;
+    } catch (error) {
+      await session.abortTransaction();
+      logger.error('[Wallet] Booking payment failed', { userId, bookingId, error: error.message });
+      throw error;
+    } finally {
+      session.endSession();
+    }
   }
 }
 

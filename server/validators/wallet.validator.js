@@ -28,3 +28,16 @@ export const requestWithdrawalValidation = Joi.object({
   }),
   bankCode: Joi.string().optional()
 });
+
+export const depositValidation = Joi.object({
+  amount: Joi.number()
+    .min(100) // Minimum deposit ₦100
+    .max(10000000) // Max deposit ₦10,000,000
+    .required()
+    .messages({
+      'number.min': 'Minimum deposit amount is ₦100',
+      'number.max': 'Maximum deposit amount is ₦10,000,000',
+      'any.required': 'Amount is required'
+    }),
+  description: Joi.string().max(200).optional()
+});

@@ -1,10 +1,9 @@
 import mongoose from 'mongoose';
 import Transaction from '../../models/Transaction.model.js';
 import Booking from '../../models/Booking.model.js';
-import User from '../../models/User.model.js';
 import WalletTransaction from '../../models/WalletTransaction.model.js';
 import monnifyService from '../../services/payment/monnify.service.js';
-import walletService from '../../services/wallet/wallet.service.js';
+import paymentService from '../../services/payment/payment.service.js';
 import logger from '../../config/logger.js';
 
 export const handleWebhook = async (req, res) => {
@@ -110,6 +109,24 @@ async function handleSuccessfulTransaction(eventData, session, res) {
     });
 
     if (!transaction) {
+      // Check if it's a Wallet Transaction (Deposit)
+      const walletTransaction = await WalletTransaction.findOne({ 
+        reference: eventData.paymentReference 
+      });
+
+      if (walletTransaction) {
+        // Use PaymentService for deposits
+        session.startTransaction();
+        try {
+          const result = await paymentService.handleDepositSuccess(eventData, walletTransaction, session);
+          await session.commitTransaction();
+          return res.status(200).json(result);
+        } catch (error) {
+          await session.abortTransaction();
+          throw error;
+        }
+      }
+
       logger.warn('[Webhook] Transaction not found', { 
         reference: eventData.paymentReference 
       });
@@ -147,40 +164,11 @@ async function handleSuccessfulTransaction(eventData, session, res) {
     booking.paidAt = new Date();
     await booking.save({ session });
 
-    // WALLET INTEGRATION: Split payment
-    const hostId = booking.spaceId.hostId;
-    const adminUser = await User.findOne({ role: 'admin' }).session(session);
-
-    if (!adminUser) {
-      throw new Error('Admin user not found');
-    }
-
-    // Credit host wallet (PENDING until space approved)
-    await walletService.addPendingBalance(
-      hostId,
-      booking.hostEarnings,
-      'host_earning',
-      `Booking payment for ${booking.spaceId.title}`,
-      { bookingId: booking._id }
-    );
-
-    // Credit admin wallet (AVAILABLE immediately)
-    await walletService.creditWallet(
-      adminUser._id,
-      booking.markupAmount,
-      'platform_fee',
-      `Platform fee from booking ${booking._id}`,
-      { bookingId: booking._id }
-    );
+    // Use PaymentService for fund distribution
+    await paymentService.distributeBookingFunds(booking, session);
 
     // Commit transaction - all operations succeeded
     await session.commitTransaction();
-
-    logger.info('[Webhook] Payment processed', {
-      bookingId: booking._id,
-      hostEarnings: booking.hostEarnings,
-      platformFee: booking.markupAmount
-    });
 
     return res.status(200).json({ success: true, message: 'Webhook processed' });
   } catch (error) {

@@ -5,9 +5,10 @@ import validate from '../middleware/validate.js';
 import {
   getWallet,
   getTransactions,
-  requestWithdrawal
+  requestWithdrawal,
+  deposit
 } from '../controllers/wallet/index.js';
-import { requestWithdrawalValidation } from '../validators/wallet.validator.js';
+import { requestWithdrawalValidation, depositValidation } from '../validators/wallet.validator.js';
 
 /**
  * @swagger
@@ -254,5 +255,64 @@ router.get('/transactions', getTransactions);
  *         description: Insufficient balance or validation error
  */
 router.post('/withdraw', withdrawalLimiter, validate(requestWithdrawalValidation), requestWithdrawal);
+
+/**
+ * @swagger
+ * /api/v1/wallet/deposit:
+ *   post:
+ *     summary: Initialize wallet deposit
+ *     tags: [Wallet]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - amount
+ *             properties:
+ *               amount:
+ *                 type: number
+ *                 minimum: 100
+ *                 maximum: 10000000
+ *                 description: Amount to deposit (min ₦100)
+ *                 example: 5000
+ *               description:
+ *                 type: string
+ *                 maxLength: 200
+ *                 description: Optional description
+ *                 example: "Wallet top-up"
+ *     responses:
+ *       200:
+ *         description: Deposit initialized successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Deposit initialized successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     checkoutUrl:
+ *                       type: string
+ *                       example: "https://sandbox.monnify.com/checkout/..."
+ *                     paymentReference:
+ *                       type: string
+ *                       example: "DEP-1234567890-60f7b3b3b3b3b3b3b3b3b3b3"
+ *                     transactionReference:
+ *                       type: string
+ *                       example: "MNFY|12|2023..."
+ *       400:
+ *         description: Validation error
+ */
+router.post('/deposit', validate(depositValidation), deposit);
 
 export default router;
