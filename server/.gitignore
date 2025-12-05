@@ -10,6 +10,8 @@ esm-migration-audit/
 
 # Documentation (generated/in-progress)
 docs/
+CIRCUIT_BREAKER_QUICKSTART.md
+CIRCUIT_BREAKER_STATUS.js
 
 # Project management
 bugfix_plan.md

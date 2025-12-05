@@ -1,10 +1,7 @@
-import User from '../models/User.model.js';
-import AppError from '../utils/AppError.js';
+import User from "../models/User.model.js";
+import AppError from "../utils/AppError.js";
+import refreshTokenRepository from "./refreshToken.repository.js";
 
-/**
- * Authentication Repository
- * Handles all database operations for authentication
- */
 class AuthRepository {
   /**
    * Find user by email
@@ -14,10 +11,12 @@ class AuthRepository {
    */
   async findUserByEmail(email, includePassword = false) {
     try {
-      const selectFields = includePassword ? '+password +refreshTokens' : '-password';
-      return await User.findOne({ email: email.toLowerCase() }).select(selectFields);
+      const selectFields = includePassword ? "+password" : "-password";
+      return await User.findOne({ email: email.toLowerCase() }).select(
+        selectFields
+      );
     } catch (error) {
-      throw new AppError('Failed to find user by email', 500, error);
+      throw new AppError("Failed to find user by email", 500, error);
     }
   }
 
@@ -28,9 +27,9 @@ class AuthRepository {
    */
   async findUserById(userId) {
     try {
-      return await User.findById(userId).select('-password -refreshTokens');
+      return await User.findById(userId).select("-password");
     } catch (error) {
-      throw new AppError('Failed to find user by ID', 500, error);
+      throw new AppError("Failed to find user by ID", 500, error);
     }
   }
 
@@ -45,9 +44,9 @@ class AuthRepository {
       return await user.save();
     } catch (error) {
       if (error.code === 11000) {
-        throw new AppError('User with this email already exists', 409);
+        throw new AppError("User with this email already exists", 409);
       }
-      throw new AppError('Failed to create user', 500, error);
+      throw new AppError("Failed to create user", 500, error);
     }
   }
 
@@ -63,9 +62,9 @@ class AuthRepository {
         userId,
         { ...updateData, updatedAt: new Date() },
         { new: true, runValidators: true }
-      ).select('-password -refreshTokens');
+      ).select("-password");
     } catch (error) {
-      throw new AppError('Failed to update user', 500, error);
+      throw new AppError("Failed to update user", 500, error);
     }
   }
 
@@ -76,12 +75,11 @@ class AuthRepository {
    */
   async findUserByRefreshToken(refreshToken) {
     try {
-      return await User.findOne({
-        'refreshTokens.token': refreshToken,
-        'refreshTokens.expiresAt': { $gt: new Date() }
-      }).select('+password +refreshTokens');
+      const tokenDoc = await refreshTokenRepository.findByToken(refreshToken);
+      if (!tokenDoc) return null;
+      return await User.findById(tokenDoc.userId).select("+password");
     } catch (error) {
-      throw new AppError('Failed to find user by refresh token', 500, error);
+      throw new AppError("Failed to find user by refresh token", 500, error);
     }
   }
 
@@ -93,24 +91,12 @@ class AuthRepository {
    */
   async addRefreshToken(userId, tokenData) {
     try {
-      return await User.findByIdAndUpdate(
+      return await refreshTokenRepository.create({
+        ...tokenData,
         userId,
-        {
-          $push: {
-            refreshTokens: {
-              token: tokenData.token,
-              expiresAt: tokenData.expiresAt,
-              userAgent: tokenData.userAgent,
-              ipAddress: tokenData.ipAddress,
-              createdAt: new Date()
-            }
-          },
-          $set: { updatedAt: new Date() }
-        },
-        { new: true }
-      ).select('+refreshTokens');
+      });
     } catch (error) {
-      throw new AppError('Failed to add refresh token', 500, error);
+      throw new AppError("Failed to add refresh token", 500, error);
     }
   }
 
@@ -123,23 +109,12 @@ class AuthRepository {
    */
   async updateRefreshToken(userId, oldToken, newTokenData) {
     try {
-      return await User.findByIdAndUpdate(
+      return await refreshTokenRepository.updateToken(oldToken, {
+        ...newTokenData,
         userId,
-        {
-          $set: {
-            'refreshTokens.$[elem].token': newTokenData.token,
-            'refreshTokens.$[elem].expiresAt': newTokenData.expiresAt,
-            'refreshTokens.$[elem].lastUsedAt': new Date(),
-            updatedAt: new Date()
-          }
-        },
-        {
-          arrayFilters: [{ 'elem.token': oldToken }],
-          new: true
-        }
-      ).select('+refreshTokens');
+      });
     } catch (error) {
-      throw new AppError('Failed to update refresh token', 500, error);
+      throw new AppError("Failed to update refresh token", 500, error);
     }
   }
 
@@ -150,16 +125,9 @@ class AuthRepository {
    */
   async removeRefreshToken(refreshToken) {
     try {
-      return await User.findOneAndUpdate(
-        { 'refreshTokens.token': refreshToken },
-        {
-          $pull: { refreshTokens: { token: refreshToken } },
-          $set: { updatedAt: new Date() }
-        },
-        { new: true }
-      );
+      return await refreshTokenRepository.deleteByToken(refreshToken);
     } catch (error) {
-      throw new AppError('Failed to remove refresh token', 500, error);
+      throw new AppError("Failed to remove refresh token", 500, error);
     }
   }
 
@@ -170,18 +138,9 @@ class AuthRepository {
    */
   async removeAllRefreshTokens(userId) {
     try {
-      return await User.findByIdAndUpdate(
-        userId,
-        {
-          $set: { 
-            refreshTokens: [],
-            updatedAt: new Date()
-          }
-        },
-        { new: true }
-      );
+      return await refreshTokenRepository.deleteAllForUser(userId);
     } catch (error) {
-      throw new AppError('Failed to remove all refresh tokens', 500, error);
+      throw new AppError("Failed to remove all refresh tokens", 500, error);
     }
   }
 
@@ -200,15 +159,15 @@ class AuthRepository {
           $set: {
             lastLogin: new Date(),
             lastLoginIp: ipAddress,
-            lastLoginUserAgent: userAgent
+            lastLoginUserAgent: userAgent,
           },
           $inc: { loginCount: 1 },
-          $set: { updatedAt: new Date() }
+          $set: { updatedAt: new Date() },
         },
         { new: true }
-      ).select('-password -refreshTokens');
+      ).select("-password");
     } catch (error) {
-      throw new AppError('Failed to update login stats', 500, error);
+      throw new AppError("Failed to update login stats", 500, error);
     }
   }
 
@@ -219,10 +178,12 @@ class AuthRepository {
    */
   async userExistsByEmail(email) {
     try {
-      const user = await User.findOne({ email: email.toLowerCase() }).select('_id');
+      const user = await User.findOne({ email: email.toLowerCase() }).select(
+        "_id"
+      );
       return !!user;
     } catch (error) {
-      throw new AppError('Failed to check user existence', 500, error);
+      throw new AppError("Failed to check user existence", 500, error);
     }
   }
 
@@ -235,7 +196,7 @@ class AuthRepository {
     try {
       return await User.findByIdAndDelete(userId);
     } catch (error) {
-      throw new AppError('Failed to delete user', 500, error);
+      throw new AppError("Failed to delete user", 500, error);
     }
   }
 
@@ -246,17 +207,10 @@ class AuthRepository {
    */
   async getUserSessions(userId) {
     try {
-      const user = await User.findById(userId).select('refreshTokens');
-      if (!user) {
-        throw new AppError('User not found', 404);
-      }
-      
-      return user.refreshTokens
-        .filter(session => new Date(session.expiresAt) > new Date())
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      return await refreshTokenRepository.getActiveTokensForUser(userId);
     } catch (error) {
       if (error instanceof AppError) throw error;
-      throw new AppError('Failed to get user sessions', 500, error);
+      throw new AppError("Failed to get user sessions", 500, error);
     }
   }
 
@@ -267,20 +221,9 @@ class AuthRepository {
    */
   async cleanExpiredTokens(userId) {
     try {
-      return await User.findByIdAndUpdate(
-        userId,
-        {
-          $pull: {
-            refreshTokens: {
-              expiresAt: { $lte: new Date() }
-            }
-          },
-          $set: { updatedAt: new Date() }
-        },
-        { new: true }
-      );
+      return await refreshTokenRepository.cleanExpiredTokens();
     } catch (error) {
-      throw new AppError('Failed to clean expired tokens', 500, error);
+      throw new AppError("Failed to clean expired tokens", 500, error);
     }
   }
 
@@ -294,15 +237,15 @@ class AuthRepository {
     try {
       const { page = 1, limit = 20, sort = { createdAt: -1 } } = options;
       const skip = (page - 1) * limit;
-      
+
       return await User.find(criteria)
-        .select('-password -refreshTokens')
+        .select("-password")
         .sort(sort)
         .skip(skip)
         .limit(limit)
         .lean();
     } catch (error) {
-      throw new AppError('Failed to find users', 500, error);
+      throw new AppError("Failed to find users", 500, error);
     }
   }
 
@@ -315,7 +258,7 @@ class AuthRepository {
     try {
       return await User.countDocuments(criteria);
     } catch (error) {
-      throw new AppError('Failed to count users', 500, error);
+      throw new AppError("Failed to count users", 500, error);
     }
   }
 
@@ -329,7 +272,7 @@ class AuthRepository {
     try {
       return await user.comparePassword(password);
     } catch (error) {
-      throw new AppError('Failed to verify password', 500, error);
+      throw new AppError("Failed to verify password", 500, error);
     }
   }
 
@@ -341,16 +284,18 @@ class AuthRepository {
    */
   async updatePassword(userId, newPassword) {
     try {
-      const user = await User.findById(userId);
+      const user = await User.findById(userId).select(
+        "email fullname role profilePicture hasCompletedOnboarding createdAt"
+      );
       if (!user) {
-        throw new AppError('User not found', 404);
+        throw new AppError("User not found", 404);
       }
-      
+
       user.password = newPassword;
       return await user.save();
     } catch (error) {
       if (error instanceof AppError) throw error;
-      throw new AppError('Failed to update password', 500, error);
+      throw new AppError("Failed to update password", 500, error);
     }
   }
 
@@ -367,12 +312,12 @@ class AuthRepository {
         {
           emailVerified: verified,
           emailVerifiedAt: verified ? new Date() : null,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         },
         { new: true }
-      ).select('-password -refreshTokens');
+      ).select("-password");
     } catch (error) {
-      throw new AppError('Failed to update email verification', 500, error);
+      throw new AppError("Failed to update email verification", 500, error);
     }
   }
 }

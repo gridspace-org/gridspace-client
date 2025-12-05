@@ -1,13 +1,13 @@
-import express from 'express';
-import rateLimit from 'express-rate-limit';
-import { authenticate } from '../middleware/auth.js';
-import validate from '../middleware/validate.js';
+import express from "express";
+import { authenticate } from "../middleware/auth.js";
+import validate from "../middleware/validate.js";
+import { webhookRateLimit } from "../middleware/rateLimits.js";
 import {
   initializePayment,
   verifyPayment,
-  handleWebhook
-} from '../controllers/payment/index.js';
-import { initializePaymentValidation } from '../validators/payment.validator.js';
+  handleWebhook,
+} from "../controllers/payment/index.js";
+import { initializePaymentValidation } from "../validators/payment.validator.js";
 
 /**
  * @swagger
@@ -17,12 +17,6 @@ import { initializePaymentValidation } from '../validators/payment.validator.js'
  */
 
 const router = express.Router();
-
-const paymentLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { success: false, message: 'Too many payment attempts' }
-});
 
 /**
  * @swagger
@@ -81,7 +75,12 @@ const paymentLimiter = rateLimit({
  *       404:
  *         description: Booking not found
  */
-router.post('/initialize', authenticate, paymentLimiter, validate(initializePaymentValidation), initializePayment);
+router.post(
+  "/initialize",
+  authenticate,
+  validate(initializePaymentValidation),
+  initializePayment
+);
 
 /**
  * @swagger
@@ -134,7 +133,7 @@ router.post('/initialize', authenticate, paymentLimiter, validate(initializePaym
  *       404:
  *         description: Transaction not found
  */
-router.get('/verify/:paymentReference', authenticate, verifyPayment);
+router.get("/verify/:paymentReference", authenticate, verifyPayment);
 
 /**
  * @swagger
@@ -161,6 +160,6 @@ router.get('/verify/:paymentReference', authenticate, verifyPayment);
  *       401:
  *         description: Invalid signature
  */
-router.post('/monnify/webhook', handleWebhook);
+router.post("/monnify/webhook", webhookRateLimit, handleWebhook);
 
 export default router;

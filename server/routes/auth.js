@@ -1,6 +1,4 @@
 import express from "express";
-import rateLimit from "express-rate-limit";
-import multer from "multer";
 import {
   signup,
   signin,
@@ -24,6 +22,7 @@ import {
 import { authenticate } from "../middleware/auth.js";
 import upload from "../config/multer.js";
 import validate from "../middleware/validate.js";
+import { authRateLimit, passwordResetLimit } from "../middleware/rateLimits.js";
 import {
   signupSchema,
   signinSchema,
@@ -48,34 +47,6 @@ import {
  */
 
 const router = express.Router();
-
-// Security rate limiting configurations
-const strictAuthLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Only 5 attempts per 15 minutes per IP
-  message: {
-    success: false,
-    message: "Too many authentication attempts. Try again in 15 minutes.",
-  },
-});
-
-const moderateAuthLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 10, // 10 attempts per minute per IP
-  message: {
-    success: false,
-    message: "Too many requests. Please slow down.",
-  },
-});
-
-const gentleAuthLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 5, // 5 attempts per 10 minutes per IP
-  message: {
-    success: false,
-    message: "Too many requests. Try again later.",
-  },
-});
 
 // Public routes
 
@@ -149,7 +120,7 @@ const gentleAuthLimiter = rateLimit({
  */
 router.post(
   "/signup",
-  moderateAuthLimiter,
+  authRateLimit,
   upload.single("profilePic"),
   validate(signupSchema),
   signup
@@ -216,7 +187,7 @@ router.post(
  *       403:
  *         description: Account suspended or inactive
  */
-router.post("/signin", strictAuthLimiter, validate(signinSchema), signin);
+router.post("/signin", authRateLimit, validate(signinSchema), signin);
 
 /**
  * @swagger
@@ -244,7 +215,7 @@ router.post("/signin", strictAuthLimiter, validate(signinSchema), signin);
  */
 router.post(
   "/request-password-reset",
-  moderateAuthLimiter,
+  passwordResetLimit,
   validate(requestPasswordResetSchema),
   requestPasswordReset
 );
@@ -290,7 +261,7 @@ router.post("/reset-password", validate(resetPasswordSchema), resetPassword);
  */
 router.post(
   "/request-email-verification",
-  gentleAuthLimiter,
+  authRateLimit,
   validate(requestEmailVerificationSchema),
   requestEmailVerification
 );
@@ -363,7 +334,7 @@ router.post(
  */
 router.post(
   "/verify-password-reset-otp",
-  gentleAuthLimiter,
+  passwordResetLimit,
   validate(verifyPasswordResetOtpSchema),
   verifyPasswordResetOtp
 );

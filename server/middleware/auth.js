@@ -36,8 +36,9 @@ const protectMiddleware = async (req, res, next) => {
     const decoded = verifyToken(token);
 
     // 4) Check if user still exists - O(1) indexed lookup
+    // Optimization: Only fetch fields needed by auth flow and controllers
     const currentUser = await User.findById(decoded.id).select(
-      "+refreshTokens"
+      "_id email fullname role isActive passwordChangedAt +refreshTokens"
     );
 
     if (!currentUser) {
@@ -137,19 +138,19 @@ export const refreshIfNeeded = async (req, res, next) => {
     return next();
   }
 
-try {
-      // Try to verify access token using the same verification logic
-      verifyToken(accessToken);
-      return next(); // Token is valid, proceed
-    } catch (error) {
-      if (error.name !== "TokenExpiredError") {
-        return next(); // Not an expiration error, proceed with normal auth flow
-      }
-
-      // Access token is expired, try to refresh
-      logger.info("Access token expired, attempting refresh");
-      return next(); // Let the main auth middleware handle the expired token
+  try {
+    // Try to verify access token using the same verification logic
+    verifyToken(accessToken);
+    return next(); // Token is valid, proceed
+  } catch (error) {
+    if (error.name !== "TokenExpiredError") {
+      return next(); // Not an expiration error, proceed with normal auth flow
     }
+
+    // Access token is expired, try to refresh
+    logger.info("Access token expired, attempting refresh");
+    return next(); // Let the main auth middleware handle the expired token
+  }
 };
 
 /**

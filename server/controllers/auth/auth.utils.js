@@ -2,21 +2,23 @@ import jwt from "jsonwebtoken";
 import streamifier from "streamifier";
 import crypto from "crypto";
 import cloudinary from "../../config/cloudinary.js";
+import { externalServices } from "../../libs/externalServices.js";
 import AppError from "../../utils/AppError.js";
 import logger from "../../config/logger.js";
+import { TOKENS, TIME } from "../../config/constants.js";
 
 // Token configurations
 const TOKEN_CONFIG = {
   access: {
-    expiresIn: process.env.ACCESS_TOKEN_EXPIRES || "15m", // 15 minutes
+    expiresIn: process.env.ACCESS_TOKEN_EXPIRES || "15m",
     type: "access",
   },
   refresh: {
-    expiresIn: process.env.REFRESH_TOKEN_EXPIRES || "7d", // 7 days
+    expiresIn: process.env.REFRESH_TOKEN_EXPIRES || "7d",
     type: "refresh",
   },
-  issuer: process.env.JWT_ISSUER || "gridspace-backend",
-  audience: process.env.JWT_AUDIENCE || "gridspace-client",
+  issuer: TOKENS.ISSUER,
+  audience: TOKENS.AUDIENCE,
 };
 
 /**
@@ -45,7 +47,9 @@ export const generateToken = (userId, tokenType = "access") => {
  */
 export const generateRefreshToken = () => ({
   token: crypto.randomBytes(40).toString("hex"),
-  expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+  expiresAt: new Date(
+    Date.now() + TOKENS.REFRESH_EXPIRES_SECONDS * TIME.ONE_SECOND_MS
+  ),
 });
 
 /**
@@ -78,7 +82,7 @@ export const setTokenCookies = (res, accessToken, refreshToken) => {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? "strict" : "lax",
-    maxAge: 15 * 60 * 1000, // 15 minutes
+    maxAge: TOKENS.ACCESS_EXPIRES_SECONDS * TIME.ONE_SECOND_MS,
     path: "/",
   });
 
@@ -87,7 +91,7 @@ export const setTokenCookies = (res, accessToken, refreshToken) => {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? "strict" : "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: TOKENS.REFRESH_EXPIRES_SECONDS * TIME.ONE_SECOND_MS,
     path: "/api/v1/auth/refresh-token",
   });
 };
@@ -150,7 +154,7 @@ export const uploadProfileImage = async (file, options = {}) => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       uploadOptions,
-      (error, result) => {
+      async (error, result) => {
         if (error) {
           logger.error("Cloudinary upload error", error);
           reject(
@@ -161,8 +165,28 @@ export const uploadProfileImage = async (file, options = {}) => {
           return;
         }
 
-        logger.info("Cloudinary upload successful", { url: result.secure_url });
-        resolve(result.secure_url);
+        try {
+          logger.info("Cloudinary upload successful", {
+            url: result.secure_url,
+          });
+          resolve(result.secure_url);
+        } catch (err) {
+          logger.error("Error processing upload result", err);
+          if (err.code === "CLOUDINARY_UNAVAILABLE") {
+            reject(
+              new AppError(
+                "Image service temporarily unavailable. Please try again later.",
+                503
+              )
+            );
+          } else {
+            reject(
+              new AppError("Failed to upload profile picture", 500, {
+                details: err.message,
+              })
+            );
+          }
+        }
       }
     );
 

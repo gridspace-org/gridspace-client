@@ -21,7 +21,7 @@
   "author": "",
   "license": "ISC",
   "engines": {
-    "node": "20.x"
+    "node": "20.x || 22.x"
   },
   "dependencies": {
     "@exortek/express-mongo-sanitize": "^1.1.1",
@@ -47,10 +47,12 @@
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.9",
+    "opossum": "^9.0.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "resend": "^6.4.1",
     "streamifier": "^0.1.1",
+    "uuid": "^10.0.0",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"
   },

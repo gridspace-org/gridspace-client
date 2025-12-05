@@ -3,14 +3,11 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import mongoSanitize from "@exortek/express-mongo-sanitize";
-import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 
 // Import middleware
 import { errorHandler, errorConverter } from "./middleware/errorHandler.js";
-import asyncHandler from "./utils/asyncHandler.js";
-import sanitizeRequest from "./middleware/sanitize.js";
-import AppError from "./utils/AppError.js";
+import requestIdMiddleware from "./middleware/requestId.js";
 
 import mongoose from "mongoose";
 import logger from "./config/logger.js";
@@ -103,6 +100,9 @@ app.use(express.json(requestLimits.json));
 app.use(express.urlencoded(requestLimits.urlencoded));
 app.use(cookieParser());
 
+// Add request ID tracing
+app.use(requestIdMiddleware);
+
 // Apply security headers
 app.use(helmet(securityHeaders));
 
@@ -147,8 +147,6 @@ app.use(cors(corsOptions));
 // NoSQL injection protection
 app.use(mongoSanitize());
 
-// Input sanitization middleware (must be after JSON parsing)
-// app.use(sanitizeRequest);
 app.use(auditLoginAttempts);
 
 // Interactive API Documentation (Swagger UI)
@@ -165,9 +163,6 @@ app.get("/api-docs.json", (req, res) => {
 });
 
 app.use("/api/v1", v1Routes);
-
-app.use(errorConverter);
-app.use(errorHandler);
 
 // Graceful shutdown handling - server instance provided by server.js
 const gracefulShutdown = async (signal) => {
@@ -229,50 +224,11 @@ process.on("unhandledRejection", (err) => {
 
 app.get("/ping", (req, res) => res.json({ ok: true }));
 
-app.use((err, req, res, next) => {
-  logger.error("Error:", err);
+// Centralized error handling middleware
+app.use(errorConverter);
+app.use(errorHandler);
 
-  if (err.name === "ValidationError") {
-    const errors = Object.values(err.errors).map((e) => e.message);
-    return res.status(400).json({
-      success: false,
-      message: "Validation Error",
-      errors: errors,
-    });
-  }
-
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyValue)[0];
-    return res.status(400).json({
-      success: false,
-      message: `${field} already exists`,
-    });
-  }
-
-  if (err.name === "JsonWebTokenError") {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid token",
-    });
-  }
-
-  if (err.name === "TokenExpiredError") {
-    return res.status(401).json({
-      success: false,
-      message: "Token expired",
-    });
-  }
-
-  // Prevent information leakage in production
-  const isDevelopment = process.env.NODE_ENV !== "production";
-
-  res.status(err.status || 500).json({
-    success: false,
-    message: isDevelopment ? err.message : "Internal Server Error",
-    ...(isDevelopment && { stack: err.stack }), // Only show stack in development
-  });
-});
-
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,

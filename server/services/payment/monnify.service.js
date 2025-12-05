@@ -1,9 +1,10 @@
-import axios from 'axios';
-import crypto from 'crypto';
-import NodeCache from 'node-cache';
-import env from '../../config/env.js';
-import logger from '../../config/logger.js';
-import AppError from '../../utils/AppError.js';
+import axios from "axios";
+import crypto from "crypto";
+import NodeCache from "node-cache";
+import env from "../../config/env.js";
+import logger from "../../config/logger.js";
+import AppError from "../../utils/AppError.js";
+import { externalServices } from "../../libs/externalServices.js";
 
 const tokenCache = new NodeCache({ stdTTL: 3600 });
 
@@ -19,81 +20,97 @@ class MonnifyService {
 
   async getAuthToken() {
     if (!this.enabled) {
-      throw new AppError('Monnify payment gateway not configured', 500);
+      throw new AppError("Monnify payment gateway not configured", 500);
     }
 
-    const cached = tokenCache.get('monnify_token');
+    const cached = tokenCache.get("monnify_token");
     if (cached) return cached;
 
     try {
-      const credentials = Buffer.from(`${this.apiKey}:${this.secretKey}`).toString('base64');
-      
-      const response = await axios.post(
-        `${this.baseUrl}/api/v1/auth/login`,
-        {},
-        { headers: { 'Authorization': `Basic ${credentials}` } }
-      );
+      const credentials = Buffer.from(
+        `${this.apiKey}:${this.secretKey}`
+      ).toString("base64");
+
+      const response = await externalServices.payment.callMonnifyAPI({
+        method: "POST",
+        url: `${this.baseUrl}/api/v1/auth/login`,
+        data: {},
+        headers: { Authorization: `Basic ${credentials}` },
+      });
 
       const token = response.data.responseBody.accessToken;
-      tokenCache.set('monnify_token', token);
-      logger.info('[Monnify] Token generated');
+      tokenCache.set("monnify_token", token);
+      logger.info("[Monnify] Token generated");
       return token;
     } catch (error) {
-      logger.error('[Monnify] Auth failed', { error: error.message });
-      throw new AppError('Payment gateway authentication failed', 500);
+      if (error.code === "MONNIFY_UNAVAILABLE") {
+        throw error;
+      }
+      logger.error("[Monnify] Auth failed", { error: error.message });
+      throw new AppError("Payment gateway authentication failed", 500);
     }
   }
 
   async initializeTransaction(data) {
     const token = await this.getAuthToken();
-    
+
     try {
-      const response = await axios.post(
-        `${this.baseUrl}/api/v1/merchant/transactions/init-transaction`,
-        {
+      const response = await externalServices.payment.callMonnifyAPI({
+        method: "POST",
+        url: `${this.baseUrl}/api/v1/merchant/transactions/init-transaction`,
+        data: {
           amount: data.amount,
           customerEmail: data.customerEmail,
           customerName: data.customerName,
           paymentReference: data.paymentReference,
           paymentDescription: data.paymentDescription,
-          currencyCode: 'NGN',
+          currencyCode: "NGN",
           contractCode: this.contractCode,
           redirectUrl: data.redirectUrl,
-          paymentMethods: ['CARD', 'ACCOUNT_TRANSFER']
+          paymentMethods: ["CARD", "ACCOUNT_TRANSFER"],
         },
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      logger.info('[Monnify] Transaction initialized', { 
+      logger.info("[Monnify] Transaction initialized", {
         reference: data.paymentReference,
-        amount: data.amount 
+        amount: data.amount,
       });
 
       return response.data.responseBody;
     } catch (error) {
-      logger.error('[Monnify] Init failed', { 
-        error: error.response?.data || error.message 
+      if (error.code === "MONNIFY_UNAVAILABLE") {
+        throw error;
+      }
+      logger.error("[Monnify] Init failed", {
+        error: error.response?.data || error.message,
       });
-      throw new AppError('Failed to initialize payment', 500);
+      throw new AppError("Failed to initialize payment", 500);
     }
   }
 
   async verifyTransaction(paymentReference) {
     const token = await this.getAuthToken();
-    
+
     try {
-      const response = await axios.get(
-        `${this.baseUrl}/api/v2/transactions/${encodeURIComponent(paymentReference)}`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      const response = await externalServices.payment.callMonnifyAPI({
+        method: "GET",
+        url: `${this.baseUrl}/api/v2/transactions/${encodeURIComponent(
+          paymentReference
+        )}`,
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       return response.data.responseBody;
     } catch (error) {
-      logger.error('[Monnify] Verification failed', { 
+      if (error.code === "MONNIFY_UNAVAILABLE") {
+        throw error;
+      }
+      logger.error("[Monnify] Verification failed", {
         reference: paymentReference,
-        error: error.response?.data || error.message 
+        error: error.response?.data || error.message,
       });
-      throw new AppError('Failed to verify payment', 500);
+      throw new AppError("Failed to verify payment", 500);
     }
   }
 
@@ -101,9 +118,9 @@ class MonnifyService {
     // CRITICAL FIX #4: Use HMAC-SHA512 (not plain SHA-512)
     // Monnify formula: SHA-512-HMAC(clientSecret, requestBody)
     const hash = crypto
-      .createHmac('sha512', this.secretKey)
+      .createHmac("sha512", this.secretKey)
       .update(JSON.stringify(payload))
-      .digest('hex');
+      .digest("hex");
     return hash === signature;
   }
 }

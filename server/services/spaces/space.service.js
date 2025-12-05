@@ -1,6 +1,7 @@
 import SpaceRepository from "../../repositories/space.repository.js";
 import AppError from "../../utils/AppError.js";
 import logger from "../../config/logger.js";
+import { externalServices } from "../../libs/externalServices.js";
 
 /**
  * Space Service Layer
@@ -547,11 +548,10 @@ const uploadSpaceImages = async (files) => {
   }
 
   const imageUrls = [];
-  const cloudinary = (await import("../../config/cloudinary.js")).default;
 
   for (const file of files) {
     try {
-      const uploadResult = await cloudinary.uploader.upload(file.path, {
+      const uploadResult = await externalServices.cloudinary.upload(file.path, {
         folder: "workspace-spaces",
         quality: "auto:good",
         fetch_format: "auto",
