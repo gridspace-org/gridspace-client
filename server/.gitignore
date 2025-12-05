@@ -17,5 +17,6 @@ CIRCUIT_BREAKER_STATUS.js
 bugfix_plan.md
 production-requirements.md
 README.local.md
+CODEBASE_REVIEW.md
 node_modules
 .env
