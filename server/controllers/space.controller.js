@@ -9,6 +9,45 @@ import cloudinary from '../config/cloudinary.js';
  * O(n) image processing + O(1) database insert
  */
 export const createSpace = async (req, res) => {
+
+
+  // export const createSpace = async (req, res) => {
+  // try {
+  // // The request may be multipart/form-data (uploaded files). Some clients may send
+  // // file-related fields in req.body (e.g., "images" or "timeSlots") which are
+  // // not part of the Joi create schema (or are expected to be handled via files).
+  // // Strip those before validation to avoid "unknown" field errors.
+  // const bodyToValidate = { ...req.body };
+  // delete bodyToValidate.images;
+  // delete bodyToValidate.timeSlots;
+
+  // // Validate request body
+  // const { error, value } = createSpaceValidation.validate(bodyToValidate);
+  //   if (error) {
+  //     logger.warn('Space creation validation failed', {
+  //       userId: req.user._id,
+  //       errors: error.details
+  //     });
+  //     return res.status(400).json({
+  //       success: false,
+  //       message: 'Validation failed',
+  //       errors: error.details.map(detail => detail.message)
+  //     });
+  //   }
+
+  //   // Check if user is a verified host
+  //   if (req.user.role !== 'host') {
+  //     logger.warn('Non-host user attempted space creation', {
+  //       userId: req.user._id,
+  //       userRole: req.user.role
+  //     });
+  //     return res.status(403).json({
+  //       success: false,
+  //       message: 'Only hosts can create spaces'
+  //     });
+  //   }
+
+
   try {
   // Log the raw request body for debugging
   logger.info('Creating space - received data:', { 
