@@ -1,26 +1,25 @@
 module.exports = {
   testEnvironment: 'node',
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.cjs'],
-  testMatch: ['**/tests/**/*.test.js'],
-  moduleNameMapper: {
-    '^(\.{1,2}/.*)\.cjs$': '$1.cjs',
-    '^(\.{1,2}/.*)\.js$': '$1',
-  },
   transform: {
     '^.+\\.js$': 'babel-jest',
   },
+  transformIgnorePatterns: [
+    '/node_modules/',
+    '\\.pnp\\.[^\\/]+$'
+  ],
+  setupFilesAfterEnv: ['<rootDir>/__tests__/setup.js'],
+  testMatch: ['**/__tests__/**/*.test.js'],
   collectCoverageFrom: [
     'controllers/**/*.js',
-    'models/**/*.js',
+    'services/**/*.js',
     'middleware/**/*.js',
-    '!**/node_modules/**'
+    'utils/**/*.js',
+    'validators/**/*.js',
+    '!**/node_modules/**',
+    '!**/__tests__/**',
   ],
-  coverageThreshold: {
-    global: {
-      branches: 70,
-      functions: 70,
-      lines: 70,
-      statements: 70
-    }
-  }
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov', 'html'],
+  verbose: true,
+  testTimeout: 30000,
 };

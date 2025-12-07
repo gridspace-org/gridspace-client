@@ -3,11 +3,11 @@
  * Centralized security settings for the application
  */
 
-import helmet from 'helmet';
+import helmet from "helmet";
 
 // Password complexity requirements
 const passwordComplexity = {
-  minLength: 16,
+  minLength: 12,
   minLowercase: 1,
   minUppercase: 1,
   minNumbers: 1,
@@ -16,8 +16,8 @@ const passwordComplexity = {
 
 // Request size limits
 const requestLimits = {
-  json: { limit: '10mb' },
-  urlencoded: { limit: '10mb', extended: true },
+  json: { limit: "1mb" },
+  urlencoded: { limit: "1mb", extended: true },
 };
 
 // Security headers configuration
@@ -27,7 +27,7 @@ const securityHeaders = {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'https:'],
+      imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'"],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
@@ -44,7 +44,7 @@ const securityHeaders = {
     preload: true,
   },
   frameguard: {
-    action: 'deny',
+    action: "deny",
   },
   noSniff: true,
   xssFilter: true,
@@ -54,25 +54,31 @@ const securityHeaders = {
 const corsConfig = (allowedOrigins) => {
   let origins = [];
 
-  if (typeof allowedOrigins === 'string') {
-    origins = allowedOrigins.split(',').map(origin => origin.trim());
+  if (typeof allowedOrigins === "string") {
+    origins = allowedOrigins.split(",").map((origin) => origin.trim());
   } else if (Array.isArray(allowedOrigins)) {
-    origins = allowedOrigins.map(origin => origin.trim());
+    origins = allowedOrigins.map((origin) => origin.trim());
   }
-  
+
   return {
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      if (origins.includes(origin) || origins.includes('*')) {
+      if (origins.includes(origin) || origins.includes("*")) {
         return callback(null, true);
       }
-      return callback(new Error(`Not allowed by CORS. Origin: ${origin}, Allowed: ${origins.join(', ')}`));
+      return callback(
+        new Error(
+          `Not allowed by CORS. Origin: ${origin}, Allowed: ${origins.join(
+            ", "
+          )}`
+        )
+      );
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    exposedHeaders: ['Content-Range', 'X-Total-Count'],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    exposedHeaders: ["Content-Range", "X-Total-Count"],
     maxAge: 86400, // 24 hours
   };
 };
@@ -81,8 +87,8 @@ const corsConfig = (allowedOrigins) => {
 const healthCheckConfig = {
   memoryThreshold: 500 * 1024 * 1024, // 500MB
   info: {
-    version: process.env.npm_package_version || '1.0.0',
-    environment: process.env.NODE_ENV || 'development',
+    version: process.env.npm_package_version || "1.0.0",
+    environment: process.env.NODE_ENV || "development",
   },
 };
 

@@ -10,13 +10,13 @@ esm-migration-audit/
 
 # Documentation (generated/in-progress)
 docs/
-API_DOCUMENTATION.md
-SPACES_API_DOCUMENTATION.md
-BOOKINGS_API_DOCUMENTATION.md
+CIRCUIT_BREAKER_QUICKSTART.md
+CIRCUIT_BREAKER_STATUS.js
 
 # Project management
 bugfix_plan.md
 production-requirements.md
 README.local.md
+CODEBASE_REVIEW.md
 node_modules
 .env

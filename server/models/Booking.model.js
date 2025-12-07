@@ -7,13 +7,11 @@ const bookingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: [true, "User ID is required"],
-    index: true // Faster queries for user's bookings
   },
   spaceId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Space", 
-    required: [true, "Space ID is required"],
-    index: true // Faster queries for space's bookings
+    required: [true, "Space ID is required"]
   },
 
   // ===== PRICING STRUCTURE (15% MARKUP MODEL) =====
@@ -46,17 +44,17 @@ const bookingSchema = new mongoose.Schema({
   },
 
   // ===== BOOKING TYPE & DURATION =====
-  // Supports both hourly ("N3,000/hour") and daily ("N5,000/day") pricing
+  // Supports hourly, daily, weekly, and monthly pricing
   bookingType: {
     type: String,
-    enum: ['hourly', 'daily'],
+    enum: ['hourly', 'daily', 'weekly', 'monthly'],
     default: 'hourly',
     required: true
   },
   duration: {
-    type: Number, // Number of hours or days based on bookingType
+    type: Number, // Number of hours/days/weeks/months based on bookingType
     required: true,
-    min: 1 // Minimum 1 hour/day booking
+    min: 1 // Minimum 1 unit booking
   },
 
   // ===== TIMING & SCHEDULING =====
@@ -159,7 +157,32 @@ const bookingSchema = new mongoose.Schema({
 
   // ===== PAYMENT WINDOW MANAGEMENT =====
   // 5-minute expiry for pending bookings to prevent slot hogging
-  
+  paymentReference: {
+    type: String,
+    sparse: true,
+    index: true
+  },
+  transactionReference: {
+    type: String,
+    sparse: true
+  },
+  paidAt: Date,
+  hostPaidOut: {
+    type: Boolean,
+    default: false
+  },
+  hostPaidOutAt: Date,
+
+  // ===== VERIFICATION & ESCROW =====
+  verifiedAt: Date,
+  verifiedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  },
+  fundsReleased: {
+    type: Boolean,
+    default: false
+  },
 
   expiresAt: {
     type: Date,
@@ -192,14 +215,25 @@ const bookingSchema = new mongoose.Schema({
 // ===== PRE-SAVE MIDDLEWARE =====
 // Handles automatic calculations before saving to database
 bookingSchema.pre("save", function(next) {
-  // Calculate duration based on booking type (hourly vs daily)
+  // Calculate duration based on booking type
   if (this.isModified("startTime") || this.isModified("endTime")) {
     const timeDiff = this.endTime - this.startTime;
     
-    if (this.bookingType === 'daily') {
-      this.duration = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)); // Convert to days
-    } else {
-      this.duration = Math.ceil(timeDiff / (1000 * 60 * 60)); // Convert to hours
+    switch(this.bookingType) {
+      case 'hourly':
+        this.duration = Math.ceil(timeDiff / (1000 * 60 * 60)); // Convert to hours
+        break;
+      case 'daily':
+        this.duration = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)); // Convert to days
+        break;
+      case 'weekly':
+        this.duration = Math.ceil(timeDiff / (1000 * 60 * 60 * 24 * 7)); // Convert to weeks
+        break;
+      case 'monthly':
+        this.duration = Math.ceil(timeDiff / (1000 * 60 * 60 * 24 * 30)); // Convert to months (30 days)
+        break;
+      default:
+        this.duration = Math.ceil(timeDiff / (1000 * 60 * 60)); // Default to hours
     }
   }
 
@@ -226,13 +260,14 @@ bookingSchema.plugin(mongoosePaginate);
 
 // ===== DATABASE INDEXES =====
 // Optimize query performance for common access patterns
+bookingSchema.index({ userId: 1 }); // User's bookings
+bookingSchema.index({ spaceId: 1 }); // Space's bookings
+bookingSchema.index({ status: 1 }); // Status queries
 bookingSchema.index({ spaceId: 1, startTime: 1, endTime: 1 }); // Conflict detection
-bookingSchema.index({ userId: 1, status: 1 });                 // User dashboard queries
-bookingSchema.index({ spaceId: 1, status: 1 });                // Host management queries
-
+bookingSchema.index({ spaceId: 1, status: 1 }); // Host management queries
 bookingSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // Auto-cleanup expired
-bookingSchema.index({ status: 1, paymentStatus: 1 });          // Admin reporting
-bookingSchema.index({ "cancellationInfo.cancelledAt": 1 });    // Cancellation analytics
+bookingSchema.index({ status: 1, paymentStatus: 1 }); // Admin reporting
+bookingSchema.index({ "cancellationInfo.cancelledAt": 1 }); // Cancellation analytics
 
 // ===== VIRTUAL FIELDS =====
 // Computed properties that don't persist to database

@@ -1,4 +1,4 @@
-import Joi from 'joi';
+import Joi from "joi";
 
 export const signupSchema = Joi.object({
   fullname: Joi.string().required(),
@@ -67,13 +67,13 @@ export const completeOnboardingSchema = Joi.object({
     'string.max': 'Location cannot exceed 200 characters'
   }),
   // Allow file uploads (handled by multer, not validated here)
-  profilePic: Joi.any().optional()
+  profilePic: Joi.any().optional(),
 }).options({ allowUnknown: true });
 
 export const updateProfileSchema = Joi.object({
   fullname: Joi.string().optional(),
-  phoneNumber: Joi.string().optional(),
-  profilePic: Joi.string().uri().optional() // Assuming profilePic will be a URL after upload
+  phonenumber: Joi.string().optional(),
+  profilePic: Joi.string().uri().optional(), // Assuming profilePic will be a URL after upload
 });
 
 export const deleteAccountSchema = Joi.object({

@@ -1,102 +1,91 @@
-import User from '../../models/User.model.js';
-import AppError from '../../utils/AppError.js';
-import asyncHandler from '../../utils/asyncHandler.js';
-import { uploadProfileImage } from './auth.utils.js';
+import authService from "../../services/auth/auth.service.js";
+import authRepository from "../../repositories/auth.repository.js";
+import logger from "../../config/logger.js";
+import AppError from "../../utils/AppError.js";
+import asyncHandler from "../../utils/asyncHandler.js";
 
+/**
+ * @desc    Get user profile
+ * @route   GET /api/v1/auth/profile
+ * @access  Private
+ */
 export const getProfile = asyncHandler(async (req, res) => {
-  if (!req.user) {
-    throw new AppError('Authentication required', 401);
-  }
+  try {
+    // Use service for profile retrieval
+    const result = await authService.getProfile(req.user._id);
 
-  res.status(200).json({
-    success: true,
-    message: 'Profile retrieved successfully',
-    user: req.user,
-  });
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error("Get profile controller failed", {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?._id,
+    });
+    throw error;
+  }
 });
 
+/**
+ * @desc    Update user profile
+ * @route   PUT /api/v1/auth/profile
+ * @access  Private
+ */
 export const updateProfile = asyncHandler(async (req, res) => {
-  if (!req.user) {
-    throw new AppError('Authentication required', 401);
+  try {
+    // Use service for profile update
+    const result = await authService.updateProfile(req.user._id, req.body);
+
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error("Update profile controller failed", {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?._id,
+      updatedFields: Object.keys(req.body || {}),
+    });
+    throw error;
   }
-
-  const { fullname, phoneNumber } = req.body;
-  const userId = req.user._id;
-
-  if (!fullname && !phoneNumber && !req.file) {
-    throw new AppError('Please provide at least one field to update', 400);
-  }
-
-  const updateData = {};
-
-  if (phoneNumber && phoneNumber !== req.user.phoneNumber) {
-    const normalizedPhone = phoneNumber.trim();
-    const existingPhone = await User.findOne({ phoneNumber: normalizedPhone, _id: { $ne: userId } });
-    if (existingPhone) {
-      throw new AppError('Phone number already exists', 400);
-    }
-    updateData.phoneNumber = normalizedPhone;
-  }
-
-  if (fullname) {
-    updateData.fullname = fullname.trim();
-  }
-
-  if (req.file) {
-    updateData.profilePic = await uploadProfileImage(req.file);
-  }
-
-  const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
-    new: true,
-    runValidators: true,
-  }).select('-password');
-
-  if (!updatedUser) {
-    throw new AppError('User not found', 404);
-  }
-
-  res.status(200).json({
-    success: true,
-    message: 'Profile updated successfully',
-    user: updatedUser,
-  });
 });
 
+/**
+ * @desc    Change user password
+ * @route   PUT /api/v1/auth/change-password
+ * @access  Private
+ */
 export const changePassword = asyncHandler(async (req, res) => {
-  if (!req.user) {
-    throw new AppError('Authentication required', 401);
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      throw new AppError(
+        "Please provide current password and new password",
+        400
+      );
+    }
+
+    // Use service for password change
+    const result = await authService.changePassword(req.user._id, {
+      currentPassword,
+      newPassword,
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error("Change password controller failed", {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?._id,
+    });
+    throw error;
   }
-
-  const { currentPassword, newPassword } = req.body;
-
-  if (!currentPassword || !newPassword) {
-    throw new AppError('Please provide current password and new password', 400);
-  }
-
-  if (newPassword.length < 6) {
-    throw new AppError('New password must be at least 6 characters long', 400);
-  }
-
-  const user = await User.findById(req.user._id);
-
-  if (!user) {
-    throw new AppError('User not found', 404);
-  }
-
-  const isCurrentPasswordValid = await user.comparePassword(currentPassword);
-  if (!isCurrentPasswordValid) {
-    throw new AppError('Current password is incorrect', 400);
-  }
-
-  user.password = newPassword;
-  await user.save();
-
-  res.status(200).json({
-    success: true,
-    message: 'Password changed successfully',
-  });
 });
 
+/**
+ * @desc    Complete user onboarding
+ * @route   POST /api/v1/auth/complete-onboarding
+ * @access  Private
+ */
 export const completeOnboarding = asyncHandler(async (req, res) => {
   if (!req.user) {
     throw new AppError('Authentication required', 401);
@@ -152,45 +141,55 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
     throw new AppError('User not found', 404);
   }
 
-  res.status(200).json({
-    success: true,
-    message: 'Onboarding completed successfully',
-    user: updatedUser,
-  });
+    res.status(200).json({
+      ...result,
+      message: "Onboarding completed successfully. Welcome to the platform!",
+    });
+  } catch (error) {
+    logger.error("Complete onboarding controller failed", {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?._id,
+    });
+    throw error;
+  }
 });
 
+/**
+ * @desc    Delete user account
+ * @route   DELETE /api/v1/auth/account
+ * @access  Private
+ */
 export const deleteAccount = asyncHandler(async (req, res) => {
-  if (!req.user) {
-    throw new AppError('Authentication required', 401);
+  try {
+    const { password } = req.body;
+
+    // Validate input
+    if (!password) {
+      throw new AppError(
+        "Password confirmation is required to delete account",
+        400
+      );
+    }
+
+    // Delete account via service
+    const result = await authService.deleteUser(req.user._id, password);
+
+    // Clear cookies and tokens
+    res.clearCookie('token');
+    res.clearCookie('refreshToken');
+
+    // Send response
+    res.status(200).json({
+      success: true,
+      message: "Account successfully deleted. Your data has been deactivated.",
+    });
+  } catch (error) {
+    logger.error("Delete account controller failed", {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?._id,
+    });
+    throw error;
   }
-
-  const { password } = req.body;
-
-  if (!password) {
-    throw new AppError('Please provide password to confirm account deletion', 400);
-  }
-
-  const user = await User.findById(req.user._id);
-
-  if (!user) {
-    throw new AppError('User not found', 404);
-  }
-
-  const isPasswordValid = await user.comparePassword(password);
-  if (!isPasswordValid) {
-    throw new AppError('Incorrect password', 400);
-  }
-
-  await User.findByIdAndDelete(req.user._id);
-
-  res.clearCookie('token', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
-  });
-
-  res.status(200).json({
-    success: true,
-    message: 'Account deleted successfully',
-  });
 });

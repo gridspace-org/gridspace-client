@@ -1,4 +1,6 @@
-import { Resend } from 'resend';
+import { Resend } from "resend";
+import logger from "../config/logger.js";
+import { externalServices } from "../libs/externalServices.js";
 
 class EmailService {
   constructor() {
@@ -14,36 +16,44 @@ class EmailService {
    * @param {string} userName - User's name (optional)
    * @returns {Promise<Object>} Result of email sending
    */
-  async sendOTPEmail(toEmail, otp, userName = 'User') {
+  async sendOTPEmail(toEmail, otp, userName = "User") {
     try {
-      const { data, error } = await this.resend.emails.send({
+      const { data, error } = await externalServices.email.sendResend({
         from: `${this.fromName} <${this.fromEmail}>`,
         to: [toEmail],
-        subject: 'Verify Your Email - GridSpace',
+        subject: "Verify Your Email - GridSpace",
         html: this.getOTPEmailTemplate(otp, userName),
         text: this.getOTPEmailTextTemplate(otp, userName),
       });
 
       if (error) {
-        console.error('Error sending OTP email with Resend:', error);
+        logger.error("Error sending OTP email with Resend:", error);
         return {
           success: false,
           error: error.message,
-          message: 'Failed to send OTP email'
+          message: "Failed to send OTP email",
         };
       }
-      
+
       return {
         success: true,
         messageId: data.id,
-        message: 'OTP email sent successfully'
+        message: "OTP email sent successfully",
       };
     } catch (error) {
-      console.error('Error sending OTP email:', error);
+      logger.error("Error sending OTP email:", error);
+      if (error.code === "EMAIL_SERVICE_UNAVAILABLE") {
+        return {
+          success: false,
+          error: error.message,
+          message:
+            "Email service temporarily unavailable. Please try again later.",
+        };
+      }
       return {
         success: false,
         error: error.message,
-        message: 'Failed to send OTP email'
+        message: "Failed to send OTP email",
       };
     }
   }
@@ -55,36 +65,44 @@ class EmailService {
    * @param {string} userName - User's name (optional)
    * @returns {Promise<Object>} Result of email sending
    */
-  async sendPasswordResetEmail(toEmail, resetOtp, userName = 'User') {
+  async sendPasswordResetEmail(toEmail, resetOtp, userName = "User") {
     try {
-      const { data, error } = await this.resend.emails.send({
+      const { data, error } = await externalServices.email.sendResend({
         from: `${this.fromName} <${this.fromEmail}>`,
         to: [toEmail],
-        subject: 'Reset Your Password - GridSpace',
+        subject: "Reset Your Password - GridSpace",
         html: this.getPasswordResetEmailTemplate(resetOtp, userName),
         text: this.getPasswordResetEmailTextTemplate(resetOtp, userName),
       });
 
       if (error) {
-        console.error('Error sending password reset email with Resend:', error);
+        logger.error("Error sending password reset email with Resend:", error);
         return {
           success: false,
           error: error.message,
-          message: 'Failed to send password reset email'
+          message: "Failed to send password reset email",
         };
       }
-      
+
       return {
         success: true,
         messageId: data.id,
-        message: 'Password reset email sent successfully'
+        message: "Password reset email sent successfully",
       };
     } catch (error) {
-      console.error('Error sending password reset email:', error);
+      logger.error("Error sending password reset email:", error);
+      if (error.code === "EMAIL_SERVICE_UNAVAILABLE") {
+        return {
+          success: false,
+          error: error.message,
+          message:
+            "Email service temporarily unavailable. Please try again later.",
+        };
+      }
       return {
         success: false,
         error: error.message,
-        message: 'Failed to send password reset email'
+        message: "Failed to send password reset email",
       };
     }
   }
@@ -101,20 +119,20 @@ class EmailService {
       if (process.env.RESEND_API_KEY) {
         return {
           success: true,
-          message: 'Resend API key is configured'
+          message: "Resend API key is configured",
         };
       } else {
         return {
           success: false,
-          message: 'Resend API key is not configured'
+          message: "Resend API key is not configured",
         };
       }
     } catch (error) {
-      console.error('Resend connection test failed:', error);
+      logger.error("Resend connection test failed:", error);
       return {
         success: false,
         error: error.message,
-        message: 'Resend connection test failed'
+        message: "Resend connection test failed",
       };
     }
   }

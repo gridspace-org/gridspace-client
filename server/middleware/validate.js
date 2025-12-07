@@ -1,3 +1,6 @@
+import Joi from "joi";
+import logger from "../utils/logger.js";
+
 const validate = (schema) => (req, res, next) => {
   let dataToValidate = { ...req.body };
 
@@ -30,10 +33,16 @@ const validate = (schema) => (req, res, next) => {
     dataToValidate = { ...dataToValidate, images: req.files.map(file => file.path) }; // Assuming 'images' is the field name for files
   }
 
-  const { error } = schema.validate(dataToValidate, { abortEarly: false, stripUnknown: true });
+  const { error, value } = schema.validate(dataToValidate, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
+
   if (error) {
     const errors = error.details.map((detail) => detail.message);
-    return res.status(400).json({ success: false, message: 'Validation Error', errors });
+    return res
+      .status(400)
+      .json({ success: false, message: "Validation Error", errors });
   }
   
   // Update req.body with normalized data for the controller

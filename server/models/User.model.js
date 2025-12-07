@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
+import { PASSWORD } from "../config/constants.js";
 
 const userSchema = new mongoose.Schema({
   fullname: {
@@ -33,7 +34,7 @@ const userSchema = new mongoose.Schema({
   googleId: {
     type: String,
     unique: true,
-    sparse: true, // Allows multiple null values
+    sparse: true,
   },
   authProvider: {
     type: String,
@@ -45,24 +46,7 @@ const userSchema = new mongoose.Schema({
     enum: ["user", "host", "admin"],
     default: "user",
   },
-  refreshTokens: [
-    {
-      token: {
-        type: String,
-        required: true,
-      },
-      expiresAt: {
-        type: Date,
-        required: true,
-      },
-      userAgent: String,
-      ipAddress: String,
-      createdAt: {
-        type: Date,
-        default: Date.now,
-      },
-    },
-  ],
+
   permissions: {
     type: [String],
     default: [],
@@ -84,7 +68,7 @@ const userSchema = new mongoose.Schema({
       type: String,
     },
   ],
-  // Add to User.model.js schema:
+
   isActive: {
     type: Boolean,
     default: true,
@@ -130,6 +114,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  walletId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Wallet",
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -137,14 +125,11 @@ const userSchema = new mongoose.Schema({
   passwordChangedAt: Date,
 });
 
-// Pre-save middleware to hash password
 userSchema.pre("save", async function (next) {
-  // Only hash the password if it has been modified (or is new) and exists
   if (!this.isModified("password") || !this.password) return next();
 
   try {
-    // Hash password with cost of 12
-    const salt = await bcrypt.genSalt(12);
+    const salt = await bcrypt.genSalt(PASSWORD.BCRYPT_ROUNDS);
     this.password = await bcrypt.hash(this.password, salt);
     this.passwordChangedAt = Date.now() - 1000;
     next();
@@ -153,7 +138,6 @@ userSchema.pre("save", async function (next) {
   }
 });
 
-// Instance method to check if password was changed after token was issued
 userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
   if (this.passwordChangedAt) {
     const changedTimestamp = parseInt(
@@ -165,18 +149,19 @@ userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
   return false;
 };
 
-// Instance method to compare password
 userSchema.methods.comparePassword = async function (candidatePassword) {
-  // If user doesn't have a password (Google OAuth), return false
   if (!this.password) return false;
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Exclude password from JSON output
 userSchema.methods.toJSON = function () {
   const userObject = this.toObject();
   delete userObject.password;
   return userObject;
 };
+
+userSchema.index({ role: 1 });
+userSchema.index({ isActive: 1, "suspension.isSuspended": 1 });
+userSchema.index({ createdAt: -1 });
 
 export default mongoose.model("User", userSchema);

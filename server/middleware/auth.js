@@ -1,28 +1,34 @@
-import jwt from 'jsonwebtoken';
-import fetch from 'node-fetch';
-import User from '../models/User.model.js';
-import AppError from '../utils/AppError.js';
-import asyncHandler from '../utils/asyncHandler.js';
-import { verifyToken } from '../controllers/auth/auth.utils.js';
-import logger from '../config/logger.js';
+import jwt from "jsonwebtoken";
+import fetch from "node-fetch";
+import User from "../models/User.model.js";
+import AppError from "../utils/AppError.js";
+import asyncHandler from "../utils/asyncHandler.js";
+import { verifyToken } from "../controllers/auth/auth.utils.js";
+import logger from "../config/logger.js";
 
 /**
  * @desc    Protect routes - verify access token and attach user to request
  * @access  Private
  */
 const protectMiddleware = async (req, res, next) => {
+  logger.info("Auth middleware called for path:", req.path);
   let token;
-  
+
   // 1) Get token from Authorization header or cookies
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    token = req.headers.authorization.split(' ')[1];
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    token = req.headers.authorization.split(" ")[1];
   } else if (req.cookies.accessToken) {
     token = req.cookies.accessToken;
   }
 
   // 2) Check if token exists
   if (!token) {
-    return next(new AppError('You are not logged in! Please log in to get access.', 401));
+    return next(
+      new AppError("You are not logged in! Please log in to get access.", 401)
+    );
   }
 
   try {
@@ -30,20 +36,35 @@ const protectMiddleware = async (req, res, next) => {
     const decoded = verifyToken(token);
 
     // 4) Check if user still exists - O(1) indexed lookup
-    const currentUser = await User.findById(decoded.id).select('+refreshTokens');
-    
+    // Optimization: Only fetch fields needed by auth flow and controllers
+    const currentUser = await User.findById(decoded.id).select(
+      "_id email fullname role isActive passwordChangedAt +refreshTokens"
+    );
+
     if (!currentUser) {
-      return next(new AppError('The user belonging to this token no longer exists.', 401));
+      return next(
+        new AppError("The user belonging to this token no longer exists.", 401)
+      );
     }
 
     // 5) Check if user changed password after the token was issued
     if (currentUser.changedPasswordAfter(decoded.iat)) {
-      return next(new AppError('User recently changed password! Please log in again.', 401));
+      return next(
+        new AppError(
+          "User recently changed password! Please log in again.",
+          401
+        )
+      );
     }
 
     // 6) Check if user account is active
     if (currentUser.isActive === false) {
-      return next(new AppError('Your account has been deactivated. Please contact support.', 403));
+      return next(
+        new AppError(
+          "Your account has been deactivated. Please contact support.",
+          403
+        )
+      );
     }
 
     // 7) Grant access to protected route
@@ -55,18 +76,22 @@ const protectMiddleware = async (req, res, next) => {
       return next(error);
     }
     // Handle token expiration specifically
-    if (error.name === 'TokenExpiredError') {
-      return next(new AppError('Your token has expired! Please log in again.', 401));
+    if (error.name === "TokenExpiredError") {
+      return next(
+        new AppError("Your token has expired! Please log in again.", 401)
+      );
     }
-    
+
     // Handle other JWT errors
-    if (error.name === 'JsonWebTokenError') {
-      return next(new AppError('Invalid token. Please log in again!', 401));
+    if (error.name === "JsonWebTokenError") {
+      return next(new AppError("Invalid token. Please log in again!", 401));
     }
-    
+
     // For any other errors
     logger.error(`Authentication error: ${error.message}`, { error });
-    return next(new AppError('Authentication failed. Please try again later.', 500));
+    return next(
+      new AppError("Authentication failed. Please try again later.", 500)
+    );
   }
 };
 
@@ -120,12 +145,14 @@ export const optionalAuth = async (req, res, next) => {
 export const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
-      return next(new AppError('You are not logged in! Please log in to get access.', 401));
+      return next(
+        new AppError("You are not logged in! Please log in to get access.", 401)
+      );
     }
-    
+
     if (!roles.includes(req.user.role)) {
       return next(
-        new AppError('You do not have permission to perform this action', 403)
+        new AppError("You do not have permission to perform this action", 403)
       );
     }
     next();
@@ -138,7 +165,7 @@ export const restrictTo = (...roles) => {
  */
 export const refreshIfNeeded = async (req, res, next) => {
   // Skip if it's a refresh token request to prevent loops
-  if (req.path === '/api/v1/auth/refresh-token') {
+  if (req.path === "/api/v1/auth/refresh-token") {
     return next();
   }
 
@@ -151,61 +178,17 @@ export const refreshIfNeeded = async (req, res, next) => {
   }
 
   try {
-    // Try to verify access token
-    jwt.verify(accessToken, process.env.JWT_SECRET);
+    // Try to verify access token using the same verification logic
+    verifyToken(accessToken);
     return next(); // Token is valid, proceed
   } catch (error) {
-    if (error.name !== 'TokenExpiredError') {
+    if (error.name !== "TokenExpiredError") {
       return next(); // Not an expiration error, proceed with normal auth flow
     }
 
     // Access token is expired, try to refresh
-    try {
-      const baseUrl = process.env.API_URL || `http://localhost:${process.env.PORT || 5000}`;
-      const response = await fetch(`${baseUrl}/api/v1/auth/refresh-token`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': `refreshToken=${refreshToken}; accessToken=${accessToken}`
-        },
-        redirect: 'follow'
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        logger.error('Token refresh failed:', { 
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData
-        });
-        return next(); // Continue with normal auth flow (will likely fail with 401)
-      }
-
-      // Get the new tokens from the response
-      const data = await response.json();
-      const { accessToken: newAccessToken } = data;
-
-      if (!newAccessToken) {
-        logger.error('No access token in refresh response');
-        return next();
-      }
-
-      // Update the access token in the request
-      req.cookies.accessToken = newAccessToken;
-      res.cookie('accessToken', newAccessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 15 * 60 * 1000, // 15 minutes
-        path: '/'
-      });
-
-      next();
-    } catch (refreshError) {
-      logger.error('Token refresh failed:', { error: refreshError });
-      return next(); // Continue with normal auth flow (will likely fail with 401)
-    }
+    logger.info("Access token expired, attempting refresh");
+    return next(); // Let the main auth middleware handle the expired token
   }
 };
 
@@ -215,7 +198,9 @@ export const refreshIfNeeded = async (req, res, next) => {
  */
 export const requireOnboarding = (req, res, next) => {
   if (!req.user.onboardingCompleted) {
-    return next(new AppError('Please complete onboarding to access this feature.', 403));
+    return next(
+      new AppError("Please complete onboarding to access this feature.", 403)
+    );
   }
   next();
 };
